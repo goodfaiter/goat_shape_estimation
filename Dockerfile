@@ -12,7 +12,8 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
 RUN pip3 install numpy rosbags pybind11 pandas scikit-learn matplotlib tqdm
 
 # Create workspace
-WORKDIR /root
+RUN mkdir workspace
+WORKDIR /workspace
 
 # Set up entrypoint
 COPY entrypoint.sh /entrypoint.sh
