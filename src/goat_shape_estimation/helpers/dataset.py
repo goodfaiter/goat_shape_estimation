@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 
-class ROSBagDataset(Dataset):
+class GoatDataset(Dataset):
     """PyTorch Dataset for ROS bag data"""
     def __init__(self, sequences, targets):
         self.sequences = sequences
