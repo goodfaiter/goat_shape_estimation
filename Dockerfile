@@ -9,7 +9,7 @@ RUN pip3 install --upgrade pip
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # Install Python dependencies
-RUN pip3 install numpy rosbags pybind11 pandas scikit-learn matplotlib tqdm
+RUN pip3 install numpy rosbags pybind11 pandas scikit-learn matplotlib tqdm roma
 
 # Create workspace
 RUN mkdir workspace
