@@ -37,6 +37,13 @@ def main():
     os.mkdir("data/output/" + now.strftime("%Y_%m_%d_%H_%M_%S"))
     file_prefix = "data/output/" + now.strftime("%Y_%m_%d_%H_%M_%S") + "/" + now.strftime("%Y_%m_%d_%H_%M_%S_")
 
+    # Setup data noise
+    noises = [NoiseClean()]
+    for i in range(6):
+        noises.append(NoiseGaussian(mean=0.0, std=0.1 + 0.2 * i))
+        noises.append(NoiseOffset(offset=0.4 * i - 1.0))
+        noises.append(NoiseSinusoidal(amplitude=0.2 + 0.2 * i, frequency=3.0 - 0.5 * i))
+
     # Prep data
     x_train, x_test, y_train, y_test = None, None, None, None
     for path in paths:
@@ -50,16 +57,19 @@ def main():
         targets = data_processor_goat.process_output_data(data)
         targets = data_processor_goat.scale_output_data_tensor(targets)
 
-        # Create sequences
-        x_train_seq, x_test_seq, y_train_seq, y_test_seq = create_sequences(
-            input=inputs, target=targets, sequence_length=sequence_length, target_length=target_length
-        )
+        for noise in noises:
+            noisy_inputs = noise(inputs)
 
-        # Concat to the rest of the training data
-        x_train = concat(x_train, x_train_seq)
-        x_test = concat(x_test, x_test_seq)
-        y_train = concat(y_train, y_train_seq)
-        y_test = concat(y_test, y_test_seq)
+            # Create sequences
+            x_train_seq, x_test_seq, y_train_seq, y_test_seq = create_sequences(
+                input=noisy_inputs, target=targets, sequence_length=sequence_length, target_length=target_length
+            )
+
+            # Concat to the rest of the training data
+            x_train = concat(x_train, x_train_seq)
+            x_test = concat(x_test, x_test_seq)
+            y_train = concat(y_train, y_train_seq)
+            y_test = concat(y_test, y_test_seq)
 
     # Create PyTorch datasets and dataloaders
     train_dataset = GoatDataset(x_train, y_train)
