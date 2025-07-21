@@ -1,13 +1,15 @@
 import torch
 from torch.utils.data import DataLoader
 from helpers.dataset import GoatDataset
-from helpers.model import LSTMModel, train_model
+from helpers.model import RNNModel, LSTMModel, SelfAttentionModel, SelfAttentionRNNModel, BeliefEncoderRNNModel, train_model
 from helpers.data_processer import DataProcessorGoat, create_sequences
+from helpers.noise import NoiseClean, NoiseGaussian, NoiseOffset, NoiseSinusoidal
 import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
 from datetime import datetime
 import os
+from random import random
 
 
 def concat(x, y):
@@ -79,12 +81,13 @@ def main():
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     # Initialize model
-    input_size = x_train.shape[2]  # Number of features
-    hidden_size = 128
-    num_layers = 2
+    input_size = x_train.shape[2]
     output_size = y_train.shape[2]
 
-    model = LSTMModel(input_size, hidden_size, num_layers, output_size)
+    # model = RNNModel(input_size, 128, 2, output_size)
+    # model = SelfAttentionModel(input_size=input_size, embed_dim=64, num_heads=8, output_size=output_size)
+    # model = SelfAttentionRNNModel(input_size=input_size, embed_dim=64, num_heads=8, hidden_size=128, num_layers=2, output_size=output_size)
+    model = BeliefEncoderRNNModel(input_size=input_size, hidden_size=128, num_layers=1, output_size=output_size)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 

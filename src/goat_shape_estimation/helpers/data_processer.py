@@ -63,15 +63,65 @@ def angular_velocities_from_quat(q_t, q_t_1, dt):
 
 
 def moving_average_smoothing(vector, window_size=5):
-    """Apply simple moving average smoothing"""
-    kernel = torch.ones(window_size) / window_size
-    # Add batch and channel dimensions for conv1d
-    vector = vector.view(vector.shape[0], 1, -1)
-    kernel = kernel.view(1, 1, -1)
-    # Pad the vector to maintain original length
+    """
+    Apply moving average smoothing to a [Timesteps, 3] vector
+    
+    Args:
+        vector: Input tensor of shape [Timesteps, 3]
+        window_size: Size of the moving average window (odd number recommended)
+    
+    Returns:
+        Smoothed tensor of same shape [Timesteps, 3]
+    """
+    # Create averaging kernel (normalized ones)
+    kernel = torch.ones(1, 1, window_size) / window_size
+    
+    # Pad for same length output
     padding = window_size // 2
-    smoothed = torch.nn.functional.conv1d(vector, kernel, padding=padding)
-    return smoothed.squeeze()
+    
+    # Apply convolution to each channel separately
+    smoothed = []
+    for i in range(3):  # For each of the 3 channels
+        channel_data = vector[:, i].view(1, 1, -1)  # [1, 1, Timesteps]
+        smoothed_channel = torch.nn.functional.conv1d(channel_data, kernel, padding=padding)
+        smoothed.append(smoothed_channel)
+    
+    # Stack channels back together
+    return torch.cat(smoothed, dim=1).squeeze(0).t()  # [Timesteps, 3]
+
+def ema_2d_optimized(vector, alpha=0.1):
+    """
+    Efficient EMA implementation for [Timesteps, 3] input
+    Corrected version that handles 3 channels properly
+    """
+    timesteps = vector.shape[0]
+    device = vector.device
+    
+    # Create EMA weights [timesteps]
+    weights = (1 - alpha) ** torch.arange(timesteps, dtype=torch.float32, device=device)
+    weights = weights.flip(0)  # Reverse for proper weighting
+    weights = weights / weights.sum()  # Normalize
+    
+    # Reshape weights for convolution [1, 1, timesteps]
+    kernel = weights.view(1, 1, -1)
+    
+    # Prepare input: [1, 3, timesteps]
+    input_ = vector.t().unsqueeze(0)
+    
+    # Apply depthwise convolution to handle 3 channels separately
+    # We need to expand the kernel to match input channels
+    kernel = kernel.expand(3, 1, -1)  # [3, 1, timesteps]
+    kernel = kernel.reshape(3, 1, -1)  # [3, 1, timesteps]
+    
+    # Use groups=3 for channel-wise operation
+    smoothed = torch.nn.functional.conv1d(
+        input_,
+        kernel,
+        padding=timesteps-1,
+        groups=3
+    )[:, :, :timesteps]
+    
+    return smoothed.squeeze(0).t()  # [Timesteps, 3]
 
 
 def world_to_robot_frame_transform(pos_point_in_w, T_world_to_robot):
@@ -317,8 +367,8 @@ class DataProcessorGoat:
 
         ## Angular Velocity following [0 w] = 2 * q_dot X q_inv
         euler_velocity_in_world = angular_velocities_from_quat(robot_rot_orientation[:-1], robot_rot_orientation[1:], 0.05)  # dt = 1/20
-        euler_velocity_in_robot = torch.bmm(T_world_to_robot[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1))
-        # TODO(VY) euler_velocity_in_robot = moving_average_smoothing(euler_velocity_in_robot)
+        euler_velocity_in_robot = torch.bmm(T_world_to_robot[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1)).squeeze()
+        euler_velocity_in_robot = ema_2d_optimized(euler_velocity_in_robot)
         output_tensor[1:, sI:sI+3] = euler_velocity_in_robot.squeeze()
         output_tensor[0, sI:sI+3] = output_tensor[1, sI:sI+3]  # We just fill the first velocity
         sI += 3
@@ -327,7 +377,7 @@ class DataProcessorGoat:
         robot_vel_in_world = (robot_pos_in_world[1:] - robot_pos_in_world[:-1]) / 0.05  # dt = 1/20
         robot_vel_in_world = robot_vel_in_world - torch.cross(euler_velocity_in_world, T_robot_to_world[1:, :3, 3])
         robot_vel_in_robot = torch.matmul(T_world_to_robot[1:, :3, :3], robot_vel_in_world.unsqueeze(-1)).squeeze()
-        # robot_vel_in_robot = moving_average_smoothing(robot_vel_in_robot)
+        robot_vel_in_robot = ema_2d_optimized(robot_vel_in_robot)
         output_tensor[1:, sI:sI+3] = robot_vel_in_robot
         output_tensor[0, sI:sI+3] = output_tensor[1, sI:sI+3]  # We just fill the first velocity
 

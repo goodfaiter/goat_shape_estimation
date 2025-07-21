@@ -3,6 +3,6 @@ version: '3.8'
 services:
   dev:
     build: .
-    container_name: ros_lstm_dev
+    container_name: goat-shape-estimation
     volumes:
       - ./:/workspace

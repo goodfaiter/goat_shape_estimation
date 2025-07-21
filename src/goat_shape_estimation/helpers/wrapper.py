@@ -30,21 +30,20 @@ class ScaledModelWrapper(nn.Module):
         self.register_buffer(
             "h0", torch.zeros(self.model.num_layers, 1, self.model.hidden_size, dtype=torch.float32, device=torch.device("cpu"))
         )
-        self.register_buffer(
-            "c0", torch.zeros(self.model.num_layers, 1, self.model.hidden_size, dtype=torch.float32, device=torch.device("cpu"))
-        )
+        # self.register_buffer(
+        #     "c0", torch.zeros(self.model.num_layers, 1, self.model.hidden_size, dtype=torch.float32, device=torch.device("cpu"))
+        # )
 
     def reset(self):
         self.h0[:] = 0.0
-        self.c0[:] = 0.0
+        # self.c0[:] = 0.0
 
     def forward(self, x: Tensor) -> Tensor:
         # Input normalization
         x = (x - self.input_mean) / self.input_std
 
         # Forward pass
-        x, (self.h0, self.c0) = self.model.lstm(x, (self.h0, self.c0))
-        x = self.model.fc(x[:, -1, :])
+        x, self.h0 = self.model(x, self.h0)
 
         # Output denormalization
         x = x * self.output_std + self.output_mean

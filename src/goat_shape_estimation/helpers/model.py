@@ -3,6 +3,26 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from helpers.wrapper import ScaledModelWrapper
+from typing import Optional
+
+
+class RNNModel(nn.Module):
+    """RNN Model with PyTorch"""
+
+    def __init__(self, input_size, hidden_size, num_layers, output_size):
+        super(RNNModel, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+
+        out, _ = self.rnn(x, h0)
+        out = self.fc(out[:, -1, :])
+        return out.unsqueeze(1)
 
 
 class LSTMModel(nn.Module):
@@ -25,6 +45,91 @@ class LSTMModel(nn.Module):
         return out.unsqueeze(1)
 
 
+class SelfAttentionModel(nn.Module):
+    """Attention-based Model with PyTorch"""
+
+    def __init__(self, input_size, embed_dim, num_heads, output_size):
+        super(SelfAttentionModel, self).__init__()
+        self.attention = nn.MultiheadAttention(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            batch_first=True  # Use batch-first format
+        )
+        # A simple feedforward layer
+        self.fc_encoder = nn.Linear(input_size, embed_dim)  # Predict a single value per sequence element
+        self.fc_decoder = nn.Linear(embed_dim, output_size)  # Predict a single value per sequence element
+
+    def forward(self, x):
+        x = self.fc_encoder(x)
+        attn_output, _ = self.attention(x, x, x)  
+        output = self.fc_decoder(attn_output)
+        return output
+
+
+class SelfAttentionRNNModel(nn.Module):
+    """Attention-based Model with PyTorch"""
+
+    def __init__(self, input_size, embed_dim, num_heads, hidden_size, num_layers, output_size):
+        super(SelfAttentionRNNModel, self).__init__()
+        self.attention = nn.MultiheadAttention(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            batch_first=True  # Use batch-first format
+        )
+
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        self.rnn = nn.RNN(embed_dim, hidden_size, num_layers, batch_first=True)
+
+        # A simple feedforward layer
+        self.fc_encoder = nn.Linear(input_size, embed_dim)  # Predict a single value per sequence element
+        self.fc_decoder = nn.Linear(hidden_size, output_size)  # Predict a single value per sequence element
+
+    def forward(self, x):
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+
+        x = self.fc_encoder(x)
+        attn_output, _ = self.attention(x, x, x)
+
+        out, _ = self.rnn(attn_output, h0)
+        out = self.fc_decoder(out[:, -1, :])
+        return out.unsqueeze(1)
+
+
+class BeliefEncoderRNNModel(nn.Module):
+    """Attention-based Model with PyTorch"""
+
+    def __init__(self, input_size, hidden_size, num_layers, output_size):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
+
+        # A simple feedforward layer
+        self.ga = nn.Linear(hidden_size, input_size)
+        self.gb = nn.Linear(hidden_size, input_size)
+        self.fc_decoder = nn.Linear(input_size, output_size)
+
+    def forward(self, x, h0: Optional[torch.Tensor] = None):
+        if h0 is None: # For the training model case
+            h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+
+        latent_b, h0 = self.rnn(x, h0)
+
+        a = self.ga(latent_b)
+        a = torch.nn.functional.tanh(a)
+        a = x * a # elementwise multiplication
+
+        b = self.gb(latent_b)
+        
+        out = a + b
+        out = self.fc_decoder(out)
+
+        return out[:, -1, :].unsqueeze(1), h0
+
+
 def train_model(
     model, train_loader, val_loader, criterion, optimizer, device, epochs, file_prefix, input_mean, input_std, output_mean, output_std
 ):
@@ -42,7 +147,7 @@ def train_model(
             inputs, targets = inputs.to(device), targets.to(device)
 
             optimizer.zero_grad()
-            outputs = model(inputs)
+            outputs, _ = model(inputs)
             loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
@@ -55,7 +160,7 @@ def train_model(
         with torch.no_grad():
             for inputs, targets in val_loader:
                 inputs, targets = inputs.to(device), targets.to(device)
-                outputs = model(inputs)
+                outputs, _ = model(inputs)
                 loss = criterion(outputs, targets)
                 val_loss += loss.item() * inputs.size(0)
 

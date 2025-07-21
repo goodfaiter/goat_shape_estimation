@@ -45,7 +45,8 @@ for i in range(inputs.shape[0]):
     #     )
     #     print(new_data_point[20:22])
 
-    estimated_velocities[i, :] = output[0, 27:]
+    # estimated_velocities[i, :] = output[0, 27:]
+    estimated_velocities[i, :] = output[0, :]
 
 ### Plot velocities
 plot_velocity_comparison(estimated_velocities.detach().numpy()[:, 0], targets.detach().numpy()[:, 0])
