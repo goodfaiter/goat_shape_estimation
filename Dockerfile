@@ -14,8 +14,3 @@ RUN pip3 install numpy rosbags pybind11 pandas scikit-learn matplotlib tqdm roma
 # Create workspace
 RUN mkdir workspace
 WORKDIR /workspace
-
-# Set up entrypoint
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]

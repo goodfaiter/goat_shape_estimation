@@ -6,3 +6,4 @@ services:
     container_name: goat-shape-estimation
     volumes:
       - ./:/workspace
+    command: tail -f /dev/null
