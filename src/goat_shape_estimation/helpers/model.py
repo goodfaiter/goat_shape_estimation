@@ -100,17 +100,17 @@ class SelfAttentionRNNModel(nn.Module):
 class BeliefEncoderRNNModel(nn.Module):
     """Attention-based Model with PyTorch"""
 
-    def __init__(self, input_size, hidden_size, num_layers, output_size):
+    def __init__(self, input_size, hidden_size, num_layers, output_size, device):
         super().__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True, device=device)
 
         # A simple feedforward layer
-        self.ga = nn.Linear(hidden_size, input_size)
-        self.gb = nn.Linear(hidden_size, input_size)
-        self.fc_decoder = nn.Linear(input_size, output_size)
+        self.ga = nn.Linear(hidden_size, input_size, device=device)
+        self.gb = nn.Linear(hidden_size, input_size, device=device)
+        self.fc_decoder = nn.Linear(input_size, output_size, device=device)
 
     def forward(self, x, h0: Optional[torch.Tensor] = None):
         if h0 is None: # For the training model case
@@ -177,10 +177,12 @@ def train_model(
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             wrapper = ScaledModelWrapper(model, input_mean, input_std, output_mean, output_std)
+            wrapper.to('cpu')
             wrapper.freeze()
             wrapper.trace_and_save(file_prefix + "best_lstm_model.pt")
             wrapper.trace_and_save("data/output/latest_lstm_model.pt")
             wrapper.unfreeze()
+            wrapper.to(device)
 
     # Plot training history
     plt.figure(figsize=(10, 5))

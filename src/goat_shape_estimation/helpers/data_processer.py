@@ -20,7 +20,7 @@ def create_transform_matrix(pos_w_to_b, quat_w_to_b):
     rot_w_to_b = roma.unitquat_to_rotmat(quat_w_to_b)
 
     # Construct 4x4 transformation matrix
-    T_w_to_b = torch.zeros(rot_w_to_b.shape[0], 4, 4)
+    T_w_to_b = torch.zeros(rot_w_to_b.shape[0], 4, 4, device=pos_w_to_b.device)
     T_w_to_b[:, :3, :3] = rot_w_to_b
     T_w_to_b[:, :3, 3] = pos_w_to_b
     T_w_to_b[:, 3, 3] = 1.0
@@ -137,7 +137,7 @@ def world_to_robot_frame_transform(pos_point_in_w, T_world_to_robot):
     """
 
     # Convert points to homogeneous coordinates
-    pos_homog_w_to_point = torch.cat([pos_point_in_w, torch.ones(pos_point_in_w.shape[0], pos_point_in_w.shape[1], 1)], dim=-1).unsqueeze(-1)
+    pos_homog_w_to_point = torch.cat([pos_point_in_w, torch.ones(pos_point_in_w.shape[0], pos_point_in_w.shape[1], 1, device=pos_point_in_w.device)], dim=-1).unsqueeze(-1)
 
 
     T_expanded = T_world_to_robot.unsqueeze(1).expand(-1, pos_point_in_w.shape[1], -1, -1)
@@ -159,9 +159,10 @@ def world_to_robot_frame_transform(pos_point_in_w, T_world_to_robot):
 
 
 class DataProcessorGoat:
-    def __init__(self):
+    def __init__(self, device):
         self.input_shape = 21
         self.output_shape = 24
+        self.device = device
         self.input_mean = torch.tensor(
             [
                 0, 0, 0, # gravity vector
@@ -185,7 +186,7 @@ class DataProcessorGoat:
                 1.7311e00,
             ],
             dtype=torch.float,
-            device=torch.device("cpu"),
+            device=self.device,
         )
         self.input_std = torch.tensor(
             [
@@ -210,7 +211,7 @@ class DataProcessorGoat:
                 0.2806,
             ],
             dtype=torch.float,
-            device=torch.device("cpu"),
+            device=self.device,
         )
 
         self.output_mean = torch.tensor(
@@ -244,7 +245,7 @@ class DataProcessorGoat:
                 0, 0, 0,
             ],
             dtype=torch.float,
-            device="cpu",
+            device=self.device,
         )  # Frame points
         self.output_std = torch.tensor(
             [
@@ -277,43 +278,43 @@ class DataProcessorGoat:
                 500, 500, 500, # Base Linear Velocity mm/s
             ],
             dtype=torch.float,
-            device="cpu",
+            device=self.device,
         )  
 
     def process_input_data(self, data) -> torch.Tensor:
         num_data = data["/imu/data/orientation_w"].size
-        data_tensor = torch.zeros([num_data, self.input_shape], dtype=torch.float, device=torch.device("cpu"))
-        robot_rot_orientation_quat = torch.zeros([num_data, 4], dtype=torch.float, device=torch.device("cpu"))
-        robot_rot_orientation_quat[:, 0] = torch.tensor(data["/imu/data/orientation_x"], dtype=torch.float, device=torch.device("cpu"))
-        robot_rot_orientation_quat[:, 1] = torch.tensor(data["/imu/data/orientation_y"], dtype=torch.float, device=torch.device("cpu"))
-        robot_rot_orientation_quat[:, 2] = torch.tensor(data["/imu/data/orientation_z"], dtype=torch.float, device=torch.device("cpu"))
-        robot_rot_orientation_quat[:, 3] = torch.tensor(data["/imu/data/orientation_w"], dtype=torch.float, device=torch.device("cpu"))
+        data_tensor = torch.zeros([num_data, self.input_shape], dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat[:, 0] = torch.tensor(data["/imu/data/orientation_x"], dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat[:, 1] = torch.tensor(data["/imu/data/orientation_y"], dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat[:, 2] = torch.tensor(data["/imu/data/orientation_z"], dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat[:, 3] = torch.tensor(data["/imu/data/orientation_w"], dtype=torch.float, device=self.device)
         robot_rot_orientation_rotmat = roma.unitquat_to_rotmat(robot_rot_orientation_quat)
         data_tensor[:, 0:3] = robot_rot_orientation_rotmat[:, :, 2]  # this is essentially rot_mat * [0 0 1].T
 
-        data_tensor[:, 3] = torch.tensor(data["/imu/data/angular_velocity_x"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 4] = torch.tensor(data["/imu/data/angular_velocity_y"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 5] = torch.tensor(data["/imu/data/angular_velocity_z"], dtype=torch.float, device=torch.device("cpu"))
+        data_tensor[:, 3] = torch.tensor(data["/imu/data/angular_velocity_x"], dtype=torch.float, device=self.device)
+        data_tensor[:, 4] = torch.tensor(data["/imu/data/angular_velocity_y"], dtype=torch.float, device=self.device)
+        data_tensor[:, 5] = torch.tensor(data["/imu/data/angular_velocity_z"], dtype=torch.float, device=self.device)
 
-        data_tensor[:, 6] = torch.tensor(data["/imu/data/linear_acceleration_x"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 7] = torch.tensor(data["/imu/data/linear_acceleration_y"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 8] = torch.tensor(data["/imu/data/linear_acceleration_z"], dtype=torch.float, device=torch.device("cpu"))
+        data_tensor[:, 6] = torch.tensor(data["/imu/data/linear_acceleration_x"], dtype=torch.float, device=self.device)
+        data_tensor[:, 7] = torch.tensor(data["/imu/data/linear_acceleration_y"], dtype=torch.float, device=self.device)
+        data_tensor[:, 8] = torch.tensor(data["/imu/data/linear_acceleration_z"], dtype=torch.float, device=self.device)
 
-        data_tensor[:, 9] = torch.tensor(data["/measured_velocity/data_0"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 10] = torch.tensor(data["/measured_velocity/data_1"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 11] = torch.tensor(data["/measured_velocity/data_2"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 12] = torch.tensor(data["/measured_velocity/data_3"], dtype=torch.float, device=torch.device("cpu"))
+        data_tensor[:, 9] = torch.tensor(data["/measured_velocity/data_0"], dtype=torch.float, device=self.device)
+        data_tensor[:, 10] = torch.tensor(data["/measured_velocity/data_1"], dtype=torch.float, device=self.device)
+        data_tensor[:, 11] = torch.tensor(data["/measured_velocity/data_2"], dtype=torch.float, device=self.device)
+        data_tensor[:, 12] = torch.tensor(data["/measured_velocity/data_3"], dtype=torch.float, device=self.device)
 
-        data_tensor[:, 13] = torch.tensor(data["/commanded_velocity/data_0"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 14] = torch.tensor(data["/commanded_velocity/data_1"], dtype=torch.float, device=torch.device("cpu"))
+        data_tensor[:, 13] = torch.tensor(data["/commanded_velocity/data_0"], dtype=torch.float, device=self.device)
+        data_tensor[:, 14] = torch.tensor(data["/commanded_velocity/data_1"], dtype=torch.float, device=self.device)
 
-        data_tensor[:, 15] = torch.tensor(data["/current_consumption/data_0"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 16] = torch.tensor(data["/current_consumption/data_1"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 17] = torch.tensor(data["/current_consumption/data_2"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 18] = torch.tensor(data["/current_consumption/data_3"], dtype=torch.float, device=torch.device("cpu"))
+        data_tensor[:, 15] = torch.tensor(data["/current_consumption/data_0"], dtype=torch.float, device=self.device)
+        data_tensor[:, 16] = torch.tensor(data["/current_consumption/data_1"], dtype=torch.float, device=self.device)
+        data_tensor[:, 17] = torch.tensor(data["/current_consumption/data_2"], dtype=torch.float, device=self.device)
+        data_tensor[:, 18] = torch.tensor(data["/current_consumption/data_3"], dtype=torch.float, device=self.device)
 
-        data_tensor[:, 19] = torch.tensor(data["/tendon_length_node_1/tendon_length/data"], dtype=torch.float, device=torch.device("cpu"))
-        data_tensor[:, 20] = torch.tensor(data["/tendon_length_node_2/tendon_length/data"], dtype=torch.float, device=torch.device("cpu"))
+        data_tensor[:, 19] = torch.tensor(data["/tendon_length_node_1/tendon_length/data"], dtype=torch.float, device=self.device)
+        data_tensor[:, 20] = torch.tensor(data["/tendon_length_node_2/tendon_length/data"], dtype=torch.float, device=self.device)
 
         return data_tensor
 
@@ -326,9 +327,9 @@ class DataProcessorGoat:
 
         ## Frame points
         num_points = 8
-        p_in_world = torch.zeros([num_data, num_points, 3], dtype=torch.float, device=torch.device("cpu"))
-        robot_pos_in_world = torch.zeros([num_data, 3], dtype=torch.float, device=torch.device("cpu"))
-        robot_rot_orientation = torch.zeros([num_data, 4], dtype=torch.float, device=torch.device("cpu"))
+        p_in_world = torch.zeros([num_data, num_points, 3], dtype=torch.float, device=self.device)
+        robot_pos_in_world = torch.zeros([num_data, 3], dtype=torch.float, device=self.device)
+        robot_rot_orientation = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
         robot_pos_in_world[:, 0] = torch.tensor(data["TEST_GOAT_Position_X"])
         robot_pos_in_world[:, 1] = torch.tensor(data["TEST_GOAT_Position_Y"])
         robot_pos_in_world[:, 2] = torch.tensor(data["TEST_GOAT_Position_Z"])
@@ -347,7 +348,7 @@ class DataProcessorGoat:
         # robot_pos_in_world = robot_pos_in_world - world_initial_pos
 
         # offset to match mocap to base X Y Z
-        yzx_quat_offset = roma.euler_to_unitquat(convention='YZX', angles=(90, 90, 0), degrees=True).expand(num_data, -1)
+        yzx_quat_offset = roma.euler_to_unitquat(convention='YZX', angles=(90, 90, 0), degrees=True, device=self.device).expand(num_data, -1)
         robot_rot_orientation = roma.quat_product(robot_rot_orientation, yzx_quat_offset)
 
         # Get transform w to robot

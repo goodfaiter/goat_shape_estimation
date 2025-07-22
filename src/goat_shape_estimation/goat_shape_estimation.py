@@ -33,6 +33,7 @@ def main():
     batch_size = 32
     epochs = 50
     learning_rate = 0.001
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create filepaths
     now = datetime.now()
@@ -53,7 +54,7 @@ def main():
         data = pd.read_parquet(path)
 
         # Apply point transformations, velocity calcuations
-        data_processor_goat = DataProcessorGoat()
+        data_processor_goat = DataProcessorGoat(device)
         inputs = data_processor_goat.process_input_data(data)
         inputs = data_processor_goat.scale_input_data_tensor(inputs)
         targets = data_processor_goat.process_output_data(data)
@@ -87,12 +88,11 @@ def main():
     # model = RNNModel(input_size, 128, 2, output_size)
     # model = SelfAttentionModel(input_size=input_size, embed_dim=64, num_heads=8, output_size=output_size)
     # model = SelfAttentionRNNModel(input_size=input_size, embed_dim=64, num_heads=8, hidden_size=128, num_layers=2, output_size=output_size)
-    model = BeliefEncoderRNNModel(input_size=input_size, hidden_size=128, num_layers=1, output_size=output_size)
+    model = BeliefEncoderRNNModel(input_size=input_size, hidden_size=128, num_layers=1, output_size=output_size, device=device)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # Train model
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trained_model = train_model(
         model,
         train_loader,
