@@ -11,6 +11,9 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
 # Install Python dependencies
 RUN pip3 install numpy rosbags pybind11 pandas scikit-learn matplotlib tqdm roma
 
+# Install dependencies
+RUN apt-get update && apt-get install -y git
+
 # Create workspace
 RUN mkdir workspace
 WORKDIR /workspace
