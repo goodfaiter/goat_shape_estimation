@@ -1,4 +1,3 @@
-import torch
 from torch.utils.data import Dataset
 
 class GoatDataset(Dataset):
@@ -11,4 +10,4 @@ class GoatDataset(Dataset):
         return len(self.sequences)
     
     def __getitem__(self, idx):
-        return torch.FloatTensor(self.sequences[idx]), torch.FloatTensor(self.targets[idx])
+        return self.sequences[idx], self.targets[idx]
