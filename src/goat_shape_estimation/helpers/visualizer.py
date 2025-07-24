@@ -3,41 +3,43 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from mpl_toolkits.mplot3d import Axes3D
 
-def visualize_3d_spline(points, down_vec, text, filename):
+def visualize_3d_spline(points_set, down_vec, text, filename):
     """
     Minimal 3D visualization of spline fitting through 8 points.
     
     Args:
         points: List of (x, y, z) coordinates of the 8 points
     """
-    # Unpack points
-    x = [p[0] for p in points]
-    y = [p[1] for p in points]
-    z = [p[2] for p in points]
-    
-    # Create parameter for interpolation (arc length approximation)
-    t = np.linspace(0, 1, len(x))
-    t_smooth = np.linspace(0, 1, 300)
-    
-    # Create cubic spline interpolation for each dimension
-    cs_x = CubicSpline(t, x, bc_type='natural')
-    cs_y = CubicSpline(t, y, bc_type='natural')
-    cs_z = CubicSpline(t, z, bc_type='natural')
-    
-    # Generate smooth curve
-    x_smooth = cs_x(t_smooth)
-    y_smooth = cs_y(t_smooth)
-    z_smooth = cs_z(t_smooth)
-    
+        
     # Create minimap-style 3D plot
-    fig = plt.figure(figsize=(8, 6), dpi=100)
+    fig = plt.figure(figsize=(6, 6), dpi=100)
     ax = fig.add_subplot(111, projection='3d')
     
-    # Plot spline curve
-    ax.plot(x_smooth, y_smooth, z_smooth, 'b-', linewidth=2, label='Spline Fit')
+    # Unpack points
+    for points in points_set:
+        x = [p[0] for p in points]
+        y = [p[1] for p in points]
+        z = [p[2] for p in points]
+        
+        # Create parameter for interpolation (arc length approximation)
+        t = np.linspace(0, 1, len(x))
+        t_smooth = np.linspace(0, 1, 300)
+        
+        # Create cubic spline interpolation for each dimension
+        cs_x = CubicSpline(t, x, bc_type='natural')
+        cs_y = CubicSpline(t, y, bc_type='natural')
+        cs_z = CubicSpline(t, z, bc_type='natural')
+        
+        # Generate smooth curve
+        x_smooth = cs_x(t_smooth)
+        y_smooth = cs_y(t_smooth)
+        z_smooth = cs_z(t_smooth)
+        
+        # Plot spline curve
+        ax.plot(x_smooth, y_smooth, z_smooth, 'b-', linewidth=2, label='Spline Fit')
     
-    # Plot original points
-    ax.scatter(x, y, z, c='r', s=50, label='Control Points')
+        # Plot original points
+        ax.scatter(x, y, z, c='r', s=50, label='Control Points')
 
     # Origin point
     origin = [0, 0, 0]
