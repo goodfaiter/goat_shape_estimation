@@ -140,6 +140,35 @@ class BeliefEncoderRNNModel(nn.Module):
         return out[:, -1, :].unsqueeze(1), h0
 
 
+class MLP(nn.Module):
+    def __init__(self, input_dim, history_dim, hidden_sizes, output_dim):
+        """
+        Args:
+            input_dim (int): Dimension of input features (DIM if flattening [B, H, DIM]).
+            hidden_sizes (list): List of hidden layer sizes (e.g., [64, 32]).
+            output_dim (int): Output dimension.
+            flatten_input (bool): If True, reshapes [B, H, DIM] → [B, H * DIM].
+        """
+        super(MLP, self).__init__()
+        
+        # Build layers dynamically
+        layers = []
+        prev_size = input_dim * history_dim
+        
+        for hidden_size in hidden_sizes:
+            layers.append(nn.Linear(prev_size, hidden_size))
+            layers.append(nn.Tanh())
+            prev_size = hidden_size
+        
+        # Final layer (no activation)
+        layers.append(nn.Linear(prev_size, output_dim))
+        
+        self.net = nn.Sequential(*layers)
+    
+    def forward(self, x):
+        return self.net(x.flatten(start_dim=1))
+
+
 def train_model(
     model, train_loader, val_loader, device, epochs, file_prefix, input_mean, input_std, output_mean, output_std
 ):
