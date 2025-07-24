@@ -27,6 +27,7 @@ def create_transform_matrix(pos_w_to_b, quat_w_to_b):
 
     return T_w_to_b
 
+
 def inverse_homogeneous_transform(T):
     """
     Compute the inverse of a 4x4 homogeneous transformation matrix.
@@ -52,6 +53,7 @@ def inverse_homogeneous_transform(T):
 
     return T_inv
 
+
 def angular_velocities_from_quat(q_t, q_t_1, dt):
     # Adopted from https://mariogc.com/post/angular-velocity-quaternions/
     # our conv x y z w -> 0 1 2 3
@@ -65,29 +67,30 @@ def angular_velocities_from_quat(q_t, q_t_1, dt):
 def moving_average_smoothing(vector, window_size=5):
     """
     Apply moving average smoothing to a [Timesteps, 3] vector
-    
+
     Args:
         vector: Input tensor of shape [Timesteps, 3]
         window_size: Size of the moving average window (odd number recommended)
-    
+
     Returns:
         Smoothed tensor of same shape [Timesteps, 3]
     """
     # Create averaging kernel (normalized ones)
     kernel = torch.ones(1, 1, window_size) / window_size
-    
+
     # Pad for same length output
     padding = window_size // 2
-    
+
     # Apply convolution to each channel separately
     smoothed = []
     for i in range(3):  # For each of the 3 channels
         channel_data = vector[:, i].view(1, 1, -1)  # [1, 1, Timesteps]
         smoothed_channel = torch.nn.functional.conv1d(channel_data, kernel, padding=padding)
         smoothed.append(smoothed_channel)
-    
+
     # Stack channels back together
     return torch.cat(smoothed, dim=1).squeeze(0).t()  # [Timesteps, 3]
+
 
 def ema_2d_optimized(vector, alpha=0.1):
     """
@@ -96,32 +99,57 @@ def ema_2d_optimized(vector, alpha=0.1):
     """
     timesteps = vector.shape[0]
     device = vector.device
-    
+
     # Create EMA weights [timesteps]
     weights = (1 - alpha) ** torch.arange(timesteps, dtype=torch.float32, device=device)
     weights = weights.flip(0)  # Reverse for proper weighting
     weights = weights / weights.sum()  # Normalize
-    
+
     # Reshape weights for convolution [1, 1, timesteps]
     kernel = weights.view(1, 1, -1)
-    
+
     # Prepare input: [1, 3, timesteps]
     input_ = vector.t().unsqueeze(0)
-    
+
     # Apply depthwise convolution to handle 3 channels separately
     # We need to expand the kernel to match input channels
     kernel = kernel.expand(3, 1, -1)  # [3, 1, timesteps]
     kernel = kernel.reshape(3, 1, -1)  # [3, 1, timesteps]
-    
+
     # Use groups=3 for channel-wise operation
-    smoothed = torch.nn.functional.conv1d(
-        input_,
-        kernel,
-        padding=timesteps-1,
-        groups=3
-    )[:, :, :timesteps]
-    
+    smoothed = torch.nn.functional.conv1d(input_, kernel, padding=timesteps - 1, groups=3)[:, :, :timesteps]
+
     return smoothed.squeeze(0).t()  # [Timesteps, 3]
+
+
+def rotation_matrix_to_angular_velocity(R, dt=1.0):
+    """
+    Compute angular velocity from a time series of rotation matrices with proper
+    skew-symmetric enforcement.
+
+    Args:
+        R: Tensor of shape (T, 3, 3) where T is the number of time steps
+        dt: Time step between consecutive rotation matrices
+
+    Returns:
+        omega: Tensor of shape (T-1, 3) containing angular velocity vectors
+    """
+    # Compute time derivative of rotation matrices
+    dRdt = (R[1:] - R[:-1]) / dt  # shape (T-1, 3, 3)
+
+    # Compute R^T * dR/dt for each time step
+    RT_dRdt = torch.bmm(R[:-1].transpose(1, 2), dRdt)  # shape (T-1, 3, 3)
+
+    # Enforce skew-symmetry by averaging and subtracting the diagonal
+    skew_symmetric = 0.5 * (RT_dRdt - RT_dRdt.transpose(1, 2))
+
+    # Extract angular velocity components
+    omega = torch.zeros(RT_dRdt.shape[0], 3, device=R.device)
+    omega[:, 0] = skew_symmetric[:, 2, 1]  # ω_x
+    omega[:, 1] = skew_symmetric[:, 0, 2]  # ω_y
+    omega[:, 2] = skew_symmetric[:, 1, 0]  # ω_z
+
+    return omega
 
 
 def world_to_robot_frame_transform(pos_point_in_w, T_world_to_robot):
@@ -137,8 +165,9 @@ def world_to_robot_frame_transform(pos_point_in_w, T_world_to_robot):
     """
 
     # Convert points to homogeneous coordinates
-    pos_homog_w_to_point = torch.cat([pos_point_in_w, torch.ones(pos_point_in_w.shape[0], pos_point_in_w.shape[1], 1, device=pos_point_in_w.device)], dim=-1).unsqueeze(-1)
-
+    pos_homog_w_to_point = torch.cat(
+        [pos_point_in_w, torch.ones(pos_point_in_w.shape[0], pos_point_in_w.shape[1], 1, device=pos_point_in_w.device)], dim=-1
+    ).unsqueeze(-1)
 
     T_expanded = T_world_to_robot.unsqueeze(1).expand(-1, pos_point_in_w.shape[1], -1, -1)
 
@@ -161,29 +190,19 @@ def world_to_robot_frame_transform(pos_point_in_w, T_world_to_robot):
 class DataProcessorGoat:
     def __init__(self, device):
         self.input_shape = 21
-        self.output_shape = 24
+        self.num_points = 12
+        self.output_shape = self.num_points * 3 + 9
         self.device = device
+        # fmt: off
         self.input_mean = torch.tensor(
             [
                 0, 0, 0, # gravity vector
-                2.0762e-04,
-                -3.3720e-06,
-                -1.4475e-03,
-                1.7342e00,
-                -2.3323e-01,
-                -9.0298e00,
-                2.8395e-01,
-                2.7578e-01,
-                2.5038e-01,
-                2.3396e-01,
-                7.6569e-01,
-                -2.5864e-02,
-                5.4099e-02,
-                4.6486e-02,
-                -1.5180e-03,
-                -9.5889e-04,
-                2.1033e00,
-                1.7311e00,
+                0, 0, 0, # angular velocity
+                0, 0, -10,  # linear acceleration
+                0, 0, 0, 0, # drive velocity [rev/s]
+                0, 0, # commanded velocity [rev/s]
+                0, 0, 0, 0, # drive current [A]
+                2.5, 2.5, # tendon length [m]
             ],
             dtype=torch.float,
             device=self.device,
@@ -191,95 +210,38 @@ class DataProcessorGoat:
         self.input_std = torch.tensor(
             [
                 1, 1, 1, # gavity vector
-                0.2353,
-                0.2135,
-                0.1660,
-                2.4749,
-                1.6329,
-                1.8700,
-                3.0410,
-                2.8407,
-                3.0058,
-                2.8082,
-                11.9981,
-                12.0488,
-                0.1115,
-                0.2306,
-                0.0984,
-                0.1294,
-                0.3942,
-                0.2806,
+                3, 3, 3, # angular velocity
+                7, 7, 7,  # linear acceleration
+                35, 35, 35, 35, # drive velocity [rev/s]
+                35, 35, # commanded velocity [rev/s]
+                0.5, 0.5, 0.5, 0.5, # drive current [A]
+                1.0, 1.0, # tendon length [m]
             ],
             dtype=torch.float,
             device=self.device,
         )
 
         self.output_mean = torch.tensor(
+            [0 for _ in range(self.num_points * 3)] + # Frame points [mm]
             [
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0,
-                # 0, 0, 0,
-                0, 0, 0,
-                0, 0, 0,
+                0, 0, 0, # Down vector
+                0, 0, 0, # Base Linear Velocity [mm/s]
+                0, 0, 0, # Base Angular Velocity [rad/s]
             ],
             dtype=torch.float,
             device=self.device,
-        )  # Frame points
+        )
         self.output_std = torch.tensor(
+            [500 for _ in range(self.num_points * 3)] + # Frame points [mm]
             [
-                # 500, # Frame points
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 500,
-                # 1, 1, 1, # Down vector
-                2, 2, 2, # Base Angular Velocity rad/s
-                500, 500, 500, # Base Linear Velocity mm/s
+                1, 1, 1, # Down vector
+                500, 500, 500, # Base Linear Velocity [mm/s]
+                2, 2, 2, # Base Angular Velocity [rad/s]
             ],
             dtype=torch.float,
             device=self.device,
         )  
+        # fmt: on
 
     def process_input_data(self, data) -> torch.Tensor:
         num_data = data["/imu/data/orientation_w"].size
@@ -323,10 +285,10 @@ class DataProcessorGoat:
 
     def process_output_data(self, data) -> torch.Tensor:
         num_data = data["TEST_GOAT_Rotation_X"].size
-        output_tensor = torch.zeros([num_data, 3 + 3], dtype=torch.float, device=torch.device("cpu"))
+        output_tensor = torch.zeros([num_data, self.output_shape], dtype=torch.float, device=self.device)
 
         ## Frame points
-        num_points = 8
+        num_points = 12
         p_in_world = torch.zeros([num_data, num_points, 3], dtype=torch.float, device=self.device)
         robot_pos_in_world = torch.zeros([num_data, 3], dtype=torch.float, device=self.device)
         robot_rot_orientation = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
@@ -348,8 +310,30 @@ class DataProcessorGoat:
         # robot_pos_in_world = robot_pos_in_world - world_initial_pos
 
         # offset to match mocap to base X Y Z
-        yzx_quat_offset = roma.euler_to_unitquat(convention='YZX', angles=(90, 90, 0), degrees=True, device=self.device).expand(num_data, -1)
-        robot_rot_orientation = roma.quat_product(robot_rot_orientation, yzx_quat_offset)
+        # yzx_quat_offset = roma.euler_to_unitquat(convention='YZX', angles=(90, 90, 0), degrees=True, device=self.device).expand(num_data, -1)
+        # robot_rot_orientation = roma.quat_product(robot_rot_orientation, yzx_quat_offset)
+
+        ## Calculate the "drive" frame
+        drive_pos_in_world = p_in_world[:, [1, 3, 5, 7, 8, 9, 10, 11], :].mean(dim=1)
+        drive_rotmat_drive_to_world = torch.zeros((num_data, 3, 3), dtype=torch.float, device=self.device)
+        drive_unit_x_in_world = p_in_world[:, [3, 5, 9, 10], :].mean(dim=1) - p_in_world[:, [1, 7, 8, 11], :].mean(dim=1)
+        drive_unit_x_in_world = torch.nn.functional.normalize(drive_unit_x_in_world, dim=1)
+        drive_unit_y_in_world = p_in_world[:, [1, 3, 8, 9], :].mean(dim=1) - p_in_world[:, [4, 7, 10, 11], :].mean(dim=1)
+        drive_unit_y_in_world = torch.nn.functional.normalize(drive_unit_y_in_world, dim=1)
+        # Gram-Schmidt orthogonalization to ensure X.dot(Y) = 0
+        x_dot_y = torch.bmm(drive_unit_x_in_world.view(num_data, 1, 3), drive_unit_y_in_world.view(num_data, 3, 1)).squeeze(1)
+        drive_unit_y_in_world = drive_unit_y_in_world - x_dot_y * drive_unit_x_in_world
+        drive_unit_y_in_world = torch.nn.functional.normalize(drive_unit_y_in_world, dim=1)
+        drive_unit_z_in_world = torch.cross(drive_unit_x_in_world, drive_unit_y_in_world, dim=1)
+        drive_rotmat_drive_to_world[:, :, 0] = drive_unit_x_in_world
+        drive_rotmat_drive_to_world[:, :, 1] = drive_unit_y_in_world
+        drive_rotmat_drive_to_world[:, :, 2] = drive_unit_z_in_world
+        drive_quat_drive_to_world = roma.rotmat_to_unitquat(drive_rotmat_drive_to_world)
+        T_drive_to_world = torch.zeros(num_data, 4, 4, device=self.device)
+        T_drive_to_world[:, :3, :3] = drive_rotmat_drive_to_world
+        T_drive_to_world[:, :3, 3] = drive_pos_in_world
+        T_drive_to_world[:, 3, 3] = 1.0
+        T_world_to_drive = inverse_homogeneous_transform(T_drive_to_world)
 
         # Get transform w to robot
         T_robot_to_world = create_transform_matrix(robot_pos_in_world, robot_rot_orientation)
@@ -359,28 +343,35 @@ class DataProcessorGoat:
         p_in_robot = world_to_robot_frame_transform(p_in_world, T_world_to_robot)
 
         sI = 0
-        # output_tensor[:, sI:sI+24] = p_in_robot.reshape(num_data, num_points * 3)
-        # sI += 24
+        output_tensor[:, sI : sI + num_points * 3] = p_in_robot.reshape(num_data, num_points * 3)
+        sI += num_points * 3
 
         ## Downward vector
-        # output_tensor[:, sI:sI+3] = -1.0 * T_world_to_robot[:, :3, 2]  # this is essentially rot_mat * [0 0 -1].T
-        # sI += 3
-
-        ## Angular Velocity following [0 w] = 2 * q_dot X q_inv
-        euler_velocity_in_world = angular_velocities_from_quat(robot_rot_orientation[:-1], robot_rot_orientation[1:], 0.05)  # dt = 1/20
-        euler_velocity_in_robot = torch.bmm(T_world_to_robot[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1)).squeeze()
-        euler_velocity_in_robot = ema_2d_optimized(euler_velocity_in_robot)
-        output_tensor[1:, sI:sI+3] = euler_velocity_in_robot.squeeze()
-        output_tensor[0, sI:sI+3] = output_tensor[1, sI:sI+3]  # We just fill the first velocity
+        output_tensor[:, sI : sI + 3] = -1.0 * T_world_to_robot[:, :3, 2]  # this is essentially rot_mat * [0 0 -1].T
         sI += 3
 
-        ## Base Velocity following robot_vel_in_robot = rot_robot_to_world.T * (vel_in_world - angular_velocity_in_world X pos_robot_in_world)
-        robot_vel_in_world = (robot_pos_in_world[1:] - robot_pos_in_world[:-1]) / 0.05  # dt = 1/20
-        robot_vel_in_world = robot_vel_in_world - torch.cross(euler_velocity_in_world, T_robot_to_world[1:, :3, 3])
-        robot_vel_in_robot = torch.matmul(T_world_to_robot[1:, :3, :3], robot_vel_in_world.unsqueeze(-1)).squeeze()
+        ## Base Velocity following robot_vel_in_robot
+        robot_vel_in_world = (drive_pos_in_world[1:] - drive_pos_in_world[:-1]) / 0.05  # dt = 1/20
+        robot_vel_in_robot = torch.matmul(T_world_to_drive[1:, :3, :3], robot_vel_in_world.unsqueeze(-1)).squeeze()
         robot_vel_in_robot = ema_2d_optimized(robot_vel_in_robot)
-        output_tensor[1:, sI:sI+3] = robot_vel_in_robot
-        output_tensor[0, sI:sI+3] = output_tensor[1, sI:sI+3]  # We just fill the first velocity
+        output_tensor[1:, sI : sI + 3] = robot_vel_in_robot
+        output_tensor[0, sI : sI + 3] = output_tensor[1, sI : sI + 3]  # We just fill the first velocity
+        sI += 3
+
+        ## Angular Velocity following [0 w] = 2 * q_dot X q_inv
+        euler_velocity_in_world = angular_velocities_from_quat(drive_quat_drive_to_world[:-1], drive_quat_drive_to_world[1:], 0.05)  # dt = 1/20
+        euler_velocity_in_robot = torch.bmm(T_world_to_drive[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1)).squeeze()
+        euler_velocity_in_robot = ema_2d_optimized(euler_velocity_in_robot)
+        output_tensor[1:, sI : sI + 3] = euler_velocity_in_robot.squeeze()
+        output_tensor[0, sI : sI + 3] = output_tensor[1, sI : sI + 3]  # We just fill the first velocity
+
+        ## Angular velocity following rotation skew matrix method
+        # euler_velocity_in_world = rotation_matrix_to_angular_velocity(drive_rotmat_drive_to_world, 0.05)
+        # euler_velocity_in_robot = torch.bmm(T_world_to_drive[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1)).squeeze()
+        # euler_velocity_in_robot = ema_2d_optimized(euler_velocity_in_robot)
+        # output_tensor[1:, sI:sI+3] = euler_velocity_in_robot.squeeze()
+        # output_tensor[0, sI:sI+3] = output_tensor[1, sI:sI+3]  # We just fill the first velocity
+        # sI += 3
 
         return output_tensor
 
@@ -403,8 +394,8 @@ def create_sequences(input, target, sequence_length=50, target_length=1, test_si
 
     # Create sequences
     num_data = len(input) - sequence_length - target_length
-    sequences = torch.zeros(num_data, sequence_length, input.shape[1])
-    targets = torch.zeros(num_data, target_length, target.shape[1])
+    sequences = torch.zeros(num_data, sequence_length, input.shape[1], device=input.device)
+    targets = torch.zeros(num_data, target_length, target.shape[1], device=target.device)
 
     for i in range(len(input) - sequence_length - target_length):
         sequences[i] = input[i : i + sequence_length]
