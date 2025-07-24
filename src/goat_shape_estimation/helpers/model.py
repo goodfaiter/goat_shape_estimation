@@ -9,20 +9,22 @@ from typing import Optional
 class RNNModel(nn.Module):
     """RNN Model with PyTorch"""
 
-    def __init__(self, input_size, hidden_size, num_layers, output_size):
+    def __init__(self, input_size, hidden_size, num_layers, output_size, device):
         super(RNNModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True, device=device)
+        self.fc = nn.Linear(in_features=hidden_size, out_features=output_size, device=device)
 
-    def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+    def forward(self, x, h0: Optional[torch.Tensor] = None):
+        if h0 is None: # For the training model case
+            h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
 
         out, _ = self.rnn(x, h0)
         out = self.fc(out[:, -1, :])
-        return out.unsqueeze(1)
+        
+        return out.unsqueeze(1), h0
 
 
 class LSTMModel(nn.Module):

@@ -63,6 +63,7 @@ def resample_rosbag2_and_csv(bag_path, topics=None, target_hz=10.0):
     # NOTE(VY): We assume headers are manually written correctly in the CSV.
     mocap_start_time = read_specific_cell(Path(bag_path + ".csv"), 0, 3)[5:]
     mocap_start_time = pd.to_datetime(mocap_start_time, format="%Y-%m-%d %I.%M.%S %p")
+    mocap_start_time = mocap_start_time - pd.Timedelta(hours=2)
     mocap_df = pd.read_csv(Path(bag_path + ".csv"), header=7)
     for i, dt in enumerate(mocap_df["Time (Seconds)"]):
         mocap_df["Time (Seconds)"][i] = mocap_start_time + pd.Timedelta(seconds=dt)
