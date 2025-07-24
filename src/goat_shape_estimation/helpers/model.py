@@ -133,7 +133,7 @@ class BeliefEncoderRNNModel(nn.Module):
 
 
 def train_model(
-    model, train_loader, val_loader, criterion, optimizer, device, epochs, file_prefix, input_mean, input_std, output_mean, output_std
+    model, train_loader, val_loader, device, epochs, file_prefix, input_mean, input_std, output_mean, output_std
 ):
     """Train the LSTM model"""
     model.to(device)
@@ -141,13 +141,14 @@ def train_model(
     train_losses = []
     val_losses = []
 
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+
     for epoch in range(epochs):
         model.train()
         train_loss = 0.0
 
         for inputs, targets in tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}"):
-            inputs, targets = inputs.to(device), targets.to(device)
-
             optimizer.zero_grad()
             outputs, _ = model(inputs)
             loss = criterion(outputs, targets)
