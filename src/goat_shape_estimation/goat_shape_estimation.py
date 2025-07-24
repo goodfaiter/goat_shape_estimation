@@ -1,11 +1,10 @@
 import torch
 from torch.utils.data import DataLoader
 from helpers.dataset import GoatDataset
-from helpers.model import RNNModel, LSTMModel, SelfAttentionModel, SelfAttentionRNNModel, BeliefEncoderRNNModel, train_model
+from helpers.model import RNNModel, LSTMModel, SelfAttentionModel, SelfAttentionRNNModel, BeliefEncoderRNNModel, MLP, train_model
 from helpers.data_processer import DataProcessorGoat, create_sequences
 from helpers.noise import NoiseClean, NoiseGaussian, NoiseOffset, NoiseSinusoidal
 import torch.nn as nn
-import torch.optim as optim
 import pandas as pd
 from datetime import datetime
 import os
@@ -22,17 +21,22 @@ def concat(x, y):
 def main():
     # Configuration
     paths = [
-        "/workspace/data/2025_06_04/2025_06_04_15_01_35_goat_training.parquet",  # shape change dataset
-        "/workspace/data/2025_06_04/2025_06_04_15_49_09_goat_training.parquet",
-        "/workspace/data/2025_06_04/2025_06_04_15_50_40_goat_training.parquet",
-        "/workspace/data/2025_06_04/2025_06_04_15_52_28_goat_training.parquet", # yaw in circle mode
-        "/workspace/data/2025_06_04/2025_06_04_16_24_22_goat_training.parquet", # c -> s -> c
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_58_28",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_56_30",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_54_41",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_43_08",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_41_22",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_36_32",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_53_52",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_51_55",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_50_04",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_21-14_37_36",
+        "/workspace/data/2025_07_21/rosbag2_2025_07_21-14_16_19",
     ]
-    sequence_length = 20
+    sequence_length = 50
     target_length = 1
-    batch_size = 32
-    epochs = 50
-    learning_rate = 0.001
+    batch_size = 64
+    epochs = 250
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create filepaths
@@ -51,7 +55,7 @@ def main():
     x_train, x_test, y_train, y_test = None, None, None, None
     for path in paths:
         # Load data from bags/csvs
-        data = pd.read_parquet(path)
+        data = pd.read_parquet(path + '_goat_training.parquet')
 
         # Apply point transformations, velocity calcuations
         data_processor_goat = DataProcessorGoat(device)
@@ -85,20 +89,17 @@ def main():
     input_size = x_train.shape[2]
     output_size = y_train.shape[2]
 
-    # model = RNNModel(input_size, 128, 2, output_size)
+    # model = RNNModel(input_size=input_size, hidden_size=64, num_layers=1, output_size=output_size, device=device)
     # model = SelfAttentionModel(input_size=input_size, embed_dim=64, num_heads=8, output_size=output_size)
     # model = SelfAttentionRNNModel(input_size=input_size, embed_dim=64, num_heads=8, hidden_size=128, num_layers=2, output_size=output_size)
-    model = BeliefEncoderRNNModel(input_size=input_size, hidden_size=128, num_layers=1, output_size=output_size, device=device)
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    model = BeliefEncoderRNNModel(input_size=input_size, latent_size=64, hidden_size=64, num_layers=1, output_size=output_size, device=device)
+    # model = MLP(input_dim=input_size, history_dim=sequence_length, hidden_sizes=[256, 128, 64], output_dim=output_size)
 
     # Train model
     trained_model = train_model(
         model,
         train_loader,
         val_loader,
-        criterion,
-        optimizer,
         device,
         epochs,
         file_prefix,
