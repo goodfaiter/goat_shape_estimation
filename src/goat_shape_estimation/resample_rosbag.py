@@ -77,13 +77,13 @@ def resample_rosbag2_and_csv(bag_path, topics=None, target_hz=10.0):
         # Get connections (topics) to process
         conns = [conn for conn in reader.connections if topics is None or conn.topic in topics]
 
-        # First pass: collect all timestamps
-        rosbag_min_ts = float("inf")
-        rosbag_max_ts = 0
+        # First pass: collect all timestamps and pick the "narrow-est" timeframe
+        rosbag_min_ts = 0
+        rosbag_max_ts = float("inf")
         for conn in conns:
-            for _, timestamp, rawdata in reader.messages(connections=[conn]):
-                rosbag_min_ts = min(rosbag_min_ts, timestamp)
-                rosbag_max_ts = max(rosbag_max_ts, timestamp)
+            timestamps = list(reader.messages(connections=[conn]))
+            rosbag_min_ts = max(rosbag_min_ts, timestamps[0][1])
+            rosbag_max_ts = min(rosbag_max_ts, timestamps[-1][1])
 
         # Create target index
         min_ts = max(mocap_min_ts, rosbag_min_ts)
