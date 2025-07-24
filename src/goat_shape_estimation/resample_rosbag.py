@@ -133,11 +133,17 @@ topics = [
 ]
 
 bags = [
-    "/workspace/data/2025_06_04/2025_06_04_15_01_35",
-    "/workspace/data/2025_06_04/2025_06_04_15_49_09",
-    "/workspace/data/2025_06_04/2025_06_04_15_50_40",
-    "/workspace/data/2025_06_04/2025_06_04_15_52_28",
-    "/workspace/data/2025_06_04/2025_06_04_16_24_22",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_58_28",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_56_30",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_54_41",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_43_08",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_41_22",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_36_32",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_53_52",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_51_55",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_50_04",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_21-14_37_36",
+    "/workspace/data/2025_07_21/rosbag2_2025_07_21-14_16_19",
 ]
 
 for bag in bags:
