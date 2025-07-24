@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from helpers.wrapper import ScaledModelWrapper
 from typing import Optional
+import torch.optim as optim
+from torch.optim import lr_scheduler
 
 
 class RNNModel(nn.Module):
@@ -102,21 +104,27 @@ class SelfAttentionRNNModel(nn.Module):
 class BeliefEncoderRNNModel(nn.Module):
     """Attention-based Model with PyTorch"""
 
-    def __init__(self, input_size, hidden_size, num_layers, output_size, device):
+    def __init__(self, input_size, latent_size, hidden_size, num_layers, output_size, device):
         super().__init__()
         self.hidden_size = hidden_size
+        self.latent_size = latent_size
         self.num_layers = num_layers
 
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True, device=device)
+        self.fc = nn.Linear(input_size, self.latent_size, device=device)
+
+        self.rnn = nn.RNN(self.latent_size, hidden_size, num_layers, batch_first=True, device=device)
 
         # A simple feedforward layer
-        self.ga = nn.Linear(hidden_size, input_size, device=device)
-        self.gb = nn.Linear(hidden_size, input_size, device=device)
-        self.fc_decoder = nn.Linear(input_size, output_size, device=device)
+        self.ga = nn.Linear(hidden_size, self.latent_size, device=device)
+        self.gb = nn.Linear(hidden_size, self.latent_size, device=device)
+        self.fc_decoder = nn.Linear(self.latent_size, output_size, device=device)
 
     def forward(self, x, h0: Optional[torch.Tensor] = None):
         if h0 is None: # For the training model case
             h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+
+        x = self.fc(x)
+        x = torch.nn.functional.tanh(x)
 
         latent_b, h0 = self.rnn(x, h0)
 
@@ -126,7 +134,7 @@ class BeliefEncoderRNNModel(nn.Module):
 
         b = self.gb(latent_b)
         
-        out = a + b
+        out = torch.nn.functional.tanh(a + b)
         out = self.fc_decoder(out)
 
         return out[:, -1, :].unsqueeze(1), h0
