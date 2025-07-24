@@ -14,9 +14,11 @@ def visualize_3d_spline(points_set, down_vec, text, filename):
     # Create minimap-style 3D plot
     fig = plt.figure(figsize=(6, 6), dpi=100)
     ax = fig.add_subplot(111, projection='3d')
+
+    spline_colors = ['b-', 'y-']
     
     # Unpack points
-    for points in points_set:
+    for i, points in enumerate(points_set):
         x = [p[0] for p in points]
         y = [p[1] for p in points]
         z = [p[2] for p in points]
@@ -36,7 +38,7 @@ def visualize_3d_spline(points_set, down_vec, text, filename):
         z_smooth = cs_z(t_smooth)
         
         # Plot spline curve
-        ax.plot(x_smooth, y_smooth, z_smooth, 'b-', linewidth=2, label='Spline Fit')
+        ax.plot(x_smooth, y_smooth, z_smooth, spline_colors[i], linewidth=2, label='Spline Fit')
     
         # Plot original points
         ax.scatter(x, y, z, c='r', s=50, label='Control Points')
