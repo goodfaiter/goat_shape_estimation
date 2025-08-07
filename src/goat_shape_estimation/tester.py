@@ -33,21 +33,21 @@ for i in range(num_data):
     sample_input = inputs[i, :].unsqueeze(0).unsqueeze(0)
 
     with torch.no_grad():
-        output = traced_model(sample_input).squeeze().squeeze()
+        output = traced_model(sample_input)[0, -1, :] # -1 means output latest prediction
 
-    ## Points and Gravity
-    # if i % 100 == 0:
-    #     estimated_points = output[:grav_index].view(num_points, 3)
-    #     estimated_gravity = output[grav_index:vel_index]
-    #     estimated_points_to_visualize[0, :, :] = estimated_points[[0, 1, 2, 3, 4, 5, 6, 7, 0], :]
-    #     estimated_points_to_visualize[1, :, :] = estimated_points[[0, 8, 2, 9, 4, 10, 6, 11, 0], :]
+    # Points and Gravity
+    if i % 100 == 0:
+        estimated_points = output[:grav_index].view(num_points, 3)
+        estimated_gravity = output[grav_index:vel_index]
+        estimated_points_to_visualize[0, :, :] = estimated_points[[0, 1, 2, 3, 4, 5, 6, 7, 0], :]
+        estimated_points_to_visualize[1, :, :] = estimated_points[[0, 8, 2, 9, 4, 10, 6, 11, 0], :]
 
-    #     visualize_3d_spline(
-    #         estimated_points_to_visualize.detach().numpy(),
-    #         estimated_gravity.detach().numpy(),
-    #         text=f" with Tendon length {inputs[i, -2]:.2f}[m] and {inputs[i, -1]:.2f}[m], timestep {i*0.05:.2f}[s]",
-    #         filename="data/output/" + f"spline_{i}",
-    #     )
+        visualize_3d_spline(
+            estimated_points_to_visualize.detach().numpy(),
+            estimated_gravity.detach().numpy(),
+            text=f" with Tendon length {inputs[i, -2]:.2f}[m] and {inputs[i, -1]:.2f}[m], timestep {i*0.05:.2f}[s]",
+            filename="data/output/" + f"spline_{i}",
+        )
 
     estimated_velocities[i, :] = output[vel_index:]
 

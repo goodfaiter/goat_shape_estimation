@@ -222,21 +222,21 @@ class DataProcessorGoat:
         )
 
         self.output_mean = torch.tensor(
-            [0 for _ in range(self.num_points * 3)] + # Frame points [mm]
+            [0 for _ in range(self.num_points * 3)] + # Frame points [m]
             [
                 0, 0, 0, # Down vector
-                0, 0, 0, # Base Linear Velocity [mm/s]
+                0, 0, 0, # Base Linear Velocity [m/s]
                 0, 0, 0, # Base Angular Velocity [rad/s]
             ],
             dtype=torch.float,
             device=self.device,
         )
         self.output_std = torch.tensor(
-            [500 for _ in range(self.num_points * 3)] + # Frame points [mm]
+            [0.5 for _ in range(self.num_points * 3)] + # Frame points [m]
             [
                 1, 1, 1, # Down vector
-                500, 500, 500, # Base Linear Velocity [mm/s]
-                2, 2, 2, # Base Angular Velocity [rad/s]
+                0.3, 0.3, 0.3, # Base Linear Velocity [m/s]
+                1, 1, 1, # Base Angular Velocity [rad/s]
             ],
             dtype=torch.float,
             device=self.device,
@@ -292,17 +292,17 @@ class DataProcessorGoat:
         p_in_world = torch.zeros([num_data, num_points, 3], dtype=torch.float, device=self.device)
         robot_pos_in_world = torch.zeros([num_data, 3], dtype=torch.float, device=self.device)
         robot_rot_orientation = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
-        robot_pos_in_world[:, 0] = torch.tensor(data["TEST_GOAT_Position_X"])
-        robot_pos_in_world[:, 1] = torch.tensor(data["TEST_GOAT_Position_Y"])
-        robot_pos_in_world[:, 2] = torch.tensor(data["TEST_GOAT_Position_Z"])
+        robot_pos_in_world[:, 0] = torch.tensor(data["TEST_GOAT_Position_X"]) * 1.0e-3
+        robot_pos_in_world[:, 1] = torch.tensor(data["TEST_GOAT_Position_Y"]) * 1.0e-3
+        robot_pos_in_world[:, 2] = torch.tensor(data["TEST_GOAT_Position_Z"]) * 1.0e-3
         robot_rot_orientation[:, 0] = torch.tensor(data["TEST_GOAT_Rotation_X"])
         robot_rot_orientation[:, 1] = torch.tensor(data["TEST_GOAT_Rotation_Y"])
         robot_rot_orientation[:, 2] = torch.tensor(data["TEST_GOAT_Rotation_Z"])
         robot_rot_orientation[:, 3] = torch.tensor(data["TEST_GOAT_Rotation_W"])
         for j in range(0, num_points):
-            p_in_world[:, j, 0] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_X"])
-            p_in_world[:, j, 1] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Y"])
-            p_in_world[:, j, 2] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Z"])
+            p_in_world[:, j, 0] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_X"]) * 1.0e-3
+            p_in_world[:, j, 1] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Y"]) * 1.0e-3
+            p_in_world[:, j, 2] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Z"]) * 1.0e-3
 
         # Offset positions by initial robot location
         # world_initial_pos = robot_pos_in_world[0, :] # We offset everything by a constant position. No mathematical reason, just easier to read the numbers
@@ -402,4 +402,4 @@ def create_sequences(input, target, sequence_length=50, target_length=1, test_si
         targets[i] = target[i + sequence_length : i + sequence_length + target_length]
 
     # Train-test split (without shuffling to preserve time order)
-    return train_test_split(sequences, targets, test_size=test_size, shuffle=False)
+    return train_test_split(sequences, targets, test_size=test_size, shuffle=True)
