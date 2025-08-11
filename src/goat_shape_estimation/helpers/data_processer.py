@@ -318,7 +318,7 @@ class DataProcessorGoat:
         drive_rotmat_drive_to_world = torch.zeros((num_data, 3, 3), dtype=torch.float, device=self.device)
         drive_unit_x_in_world = p_in_world[:, [3, 5, 9, 10], :].mean(dim=1) - p_in_world[:, [1, 7, 8, 11], :].mean(dim=1)
         drive_unit_x_in_world = torch.nn.functional.normalize(drive_unit_x_in_world, dim=1)
-        drive_unit_y_in_world = p_in_world[:, [1, 3, 8, 9], :].mean(dim=1) - p_in_world[:, [4, 7, 10, 11], :].mean(dim=1)
+        drive_unit_y_in_world = p_in_world[:, [1, 3, 8, 9], :].mean(dim=1) - p_in_world[:, [5, 7, 10, 11], :].mean(dim=1)
         drive_unit_y_in_world = torch.nn.functional.normalize(drive_unit_y_in_world, dim=1)
         # Gram-Schmidt orthogonalization to ensure X.dot(Y) = 0
         x_dot_y = torch.bmm(drive_unit_x_in_world.view(num_data, 1, 3), drive_unit_y_in_world.view(num_data, 3, 1)).squeeze(1)
