@@ -213,8 +213,9 @@ def train_model(
 
         print(f"Epoch {epoch+1}/{epochs} - Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}")
 
-        # Save last model
-        if epoch == epochs - 1:
+        # Save best model
+        if val_loss < best_val_loss:
+            best_val_loss = min(best_val_loss, val_loss)
             wrapper = ScaledModelWrapper(model, input_mean, input_std, output_mean, output_std)
             wrapper.to('cpu')
             wrapper.freeze()
