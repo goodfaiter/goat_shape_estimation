@@ -91,8 +91,7 @@ def moving_average_smoothing(vector, window_size=5):
     # Stack channels back together
     return torch.cat(smoothed, dim=1).squeeze(0).t()  # [Timesteps, 3]
 
-
-def ema_2d_optimized(vector, alpha=0.1):
+def ema_2d_optimized(vector, alpha=0.3):
     """
     Efficient EMA implementation for [Timesteps, 3] input
     Corrected version that handles 3 channels properly
