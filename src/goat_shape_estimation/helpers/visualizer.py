@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from scipy.interpolate import CubicSpline
 from mpl_toolkits.mplot3d import Axes3D
+
+# matplotlib.use('qtagg')
 
 def visualize_3d_spline(points_set, down_vec, text, filename):
     """
@@ -51,7 +54,7 @@ def visualize_3d_spline(points_set, down_vec, text, filename):
                         [0, 1, 0],  # y-axis (green)
                         [0, 0, 1],  # z-axis (blue)
                         down_vec])  # gravity (back)
-    vectors *= 100
+    vectors *= 0.1
 
     # RGB colors corresponding to each vector
     colors = ['red', 'green', 'blue', 'black']
@@ -62,9 +65,9 @@ def visualize_3d_spline(points_set, down_vec, text, filename):
         ax.quiver(*origin, *vec, color=color, arrow_length_ratio=0.1, linewidth=2, label=label + '-axis')
     
     # Minimap styling
-    ax.set_xticks(np.linspace(-500, 500, 5))
-    ax.set_yticks(np.linspace(-500, 500, 5))
-    ax.set_zticks(np.linspace(-500, 500, 5))
+    ax.set_xticks(np.linspace(-0.5, 0.5, 5))
+    ax.set_yticks(np.linspace(-0.5, 0.5, 5))
+    ax.set_zticks(np.linspace(-0.5, 0.5, 5))
     ax.tick_params(labelsize=8)
     ax.set_title('Spline Fitting ' + text, fontsize=10)
     ax.legend(fontsize=8)
