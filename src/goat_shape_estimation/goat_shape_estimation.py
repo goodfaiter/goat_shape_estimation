@@ -37,6 +37,7 @@ def main():
     target_length = 1
     batch_size = 64
     epochs = 250
+    test_size=0.01
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create filepaths
@@ -69,7 +70,7 @@ def main():
 
             # Create sequences
             x_train_seq, x_test_seq, y_train_seq, y_test_seq = create_sequences(
-                input=noisy_inputs, target=targets, sequence_length=sequence_length, target_length=target_length
+                input=noisy_inputs, target=targets, sequence_length=sequence_length, target_length=target_length, test_size=test_size
             )
 
             # Concat to the rest of the training data
