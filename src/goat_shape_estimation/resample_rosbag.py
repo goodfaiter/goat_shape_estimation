@@ -44,12 +44,13 @@ def read_specific_cell(csv_file, row_num, col_num):
     return None
 
 
-def resample_rosbag2_and_csv(bag_path, topics=None, target_hz=10.0):
+def resample_rosbag2_and_csv(bag_path, offset=0, topics=None, target_hz=10.0):
     """
     Resample ROS 2 bag data to target frequency using nearest-neighbor interpolation.
 
     Args:
         bag_path: Path to ROS 2 bag directory
+        offset: by how many points is the mocap data ahead of ros data
         target_hz: Target frequency in Hz (default: 10.0)
         topics: List of topics to include (None for all topics)
 
@@ -66,7 +67,7 @@ def resample_rosbag2_and_csv(bag_path, topics=None, target_hz=10.0):
     mocap_start_time = mocap_start_time - pd.Timedelta(hours=2)
     mocap_df = pd.read_csv(Path(bag_path + ".csv"), header=7)
     for i, dt in enumerate(mocap_df["Time (Seconds)"]):
-        mocap_df["Time (Seconds)"][i] = mocap_start_time + pd.Timedelta(seconds=dt)
+        mocap_df["Time (Seconds)"][i] = mocap_start_time + pd.Timedelta(seconds=dt + offset*1/target_hz)
     mocap_df.set_index("Time (Seconds)", inplace=True)
 
     mocap_min_ts = mocap_df.index[0].value
@@ -132,23 +133,40 @@ topics = [
     "/set_tendon_length/manual",
 ]
 
-bags = [
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_58_28",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_56_30",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-10_54_41",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_43_08",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_41_22",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-09_36_32",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_53_52",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_51_55",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_22-08_50_04",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_21-14_37_36",
-    "/workspace/data/2025_07_21/rosbag2_2025_07_21-14_16_19",
+bags_and_offsets = [
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-10_58_28", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-10_56_30", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-10_54_41", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-09_43_08", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-09_41_22", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-09_36_32", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-08_53_52", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-08_51_55", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_22-08_50_04", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_21-14_37_36", 20),
+    # ("/workspace/data/2025_07_21/rosbag2_2025_07_21-14_16_19", 20),
+    # ("/workspace/data/2025_08_08/rosbag2_2025_08_08-08_06_10", -40),
+    # ("/workspace/data/2025_08_08/rosbag2_2025_08_08-08_07_55", -40),
+    # ("/workspace/data/2025_08_08/rosbag2_2025_08_08-08_07_55", -40),
+    # ("/workspace/data/2025_08_08/rosbag2_2025_08_08-08_09_46", -40),
+    # ("/workspace/data/2025_08_08/rosbag2_2025_08_08-08_11_23", -40),
+    # ("/workspace/data/2025_08_08/rosbag2_2025_08_08-10_51_28", -33),
+    # ("/workspace/data/2025_08_08/rosbag2_2025_08_08-10_56_21", -33),
+    # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-16_04_26", 19),
+    # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-16_07_25", 13),
+    # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_14_46", 27),
+    # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_16_12", 19),
+    # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_17_39", 27),
+    # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_19_01", 19),
+    # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_43_41", 13),
+    ("/workspace/data/2025_08_13/rosbag2_2025_08_13-12_11_45", 26),
+
 ]
 
-for bag in bags:
+for bag, offset in bags_and_offsets:
     df = resample_rosbag2_and_csv(
         bag,
+        offset,
         topics=topics,
         target_hz=20.0,
     )
