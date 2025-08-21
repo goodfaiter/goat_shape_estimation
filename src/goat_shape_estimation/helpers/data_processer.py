@@ -288,7 +288,7 @@ class DataProcessorGoat:
 
         ## Frame points
         num_points = 12
-        p_in_world = torch.zeros([num_data, num_points, 3], dtype=torch.float, device=self.device)
+        self.p_in_world = torch.zeros([num_data, num_points, 3], dtype=torch.float, device=self.device)
         robot_pos_in_world = torch.zeros([num_data, 3], dtype=torch.float, device=self.device)
         robot_rot_orientation = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
         robot_pos_in_world[:, 0] = torch.tensor(data["TEST_GOAT_Position_X"]) * 1.0e-3
@@ -299,9 +299,9 @@ class DataProcessorGoat:
         robot_rot_orientation[:, 2] = torch.tensor(data["TEST_GOAT_Rotation_Z"])
         robot_rot_orientation[:, 3] = torch.tensor(data["TEST_GOAT_Rotation_W"])
         for j in range(0, num_points):
-            p_in_world[:, j, 0] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_X"]) * 1.0e-3
-            p_in_world[:, j, 1] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Y"]) * 1.0e-3
-            p_in_world[:, j, 2] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Z"]) * 1.0e-3
+            self.p_in_world[:, j, 0] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_X"]) * 1.0e-3
+            self.p_in_world[:, j, 1] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Y"]) * 1.0e-3
+            self.p_in_world[:, j, 2] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Z"]) * 1.0e-3
 
         # Offset positions by initial robot location
         # world_initial_pos = robot_pos_in_world[0, :] # We offset everything by a constant position. No mathematical reason, just easier to read the numbers
@@ -313,24 +313,24 @@ class DataProcessorGoat:
         # robot_rot_orientation = roma.quat_product(robot_rot_orientation, yzx_quat_offset)
 
         ## Calculate the "drive" frame
-        drive_pos_in_world = p_in_world[:, [1, 3, 5, 7, 8, 9, 10, 11], :].mean(dim=1)
-        drive_rotmat_drive_to_world = torch.zeros((num_data, 3, 3), dtype=torch.float, device=self.device)
-        drive_unit_x_in_world = p_in_world[:, [3, 5, 9, 10], :].mean(dim=1) - p_in_world[:, [1, 7, 8, 11], :].mean(dim=1)
+        self.drive_pos_in_world = self.p_in_world[:, [1, 3, 5, 7, 8, 9, 10, 11], :].mean(dim=1)
+        self.drive_rotmat_drive_to_world = torch.zeros((num_data, 3, 3), dtype=torch.float, device=self.device)
+        drive_unit_x_in_world = self.p_in_world[:, [3, 5, 9, 10], :].mean(dim=1) - self.p_in_world[:, [1, 7, 8, 11], :].mean(dim=1)
         drive_unit_x_in_world = torch.nn.functional.normalize(drive_unit_x_in_world, dim=1)
-        drive_unit_y_in_world = p_in_world[:, [1, 3, 8, 9], :].mean(dim=1) - p_in_world[:, [5, 7, 10, 11], :].mean(dim=1)
+        drive_unit_y_in_world = self.p_in_world[:, [1, 3, 8, 9], :].mean(dim=1) - self.p_in_world[:, [5, 7, 10, 11], :].mean(dim=1)
         drive_unit_y_in_world = torch.nn.functional.normalize(drive_unit_y_in_world, dim=1)
         # Gram-Schmidt orthogonalization to ensure X.dot(Y) = 0
         x_dot_y = torch.bmm(drive_unit_x_in_world.view(num_data, 1, 3), drive_unit_y_in_world.view(num_data, 3, 1)).squeeze(1)
         drive_unit_y_in_world = drive_unit_y_in_world - x_dot_y * drive_unit_x_in_world
         drive_unit_y_in_world = torch.nn.functional.normalize(drive_unit_y_in_world, dim=1)
         drive_unit_z_in_world = torch.cross(drive_unit_x_in_world, drive_unit_y_in_world, dim=1)
-        drive_rotmat_drive_to_world[:, :, 0] = drive_unit_x_in_world
-        drive_rotmat_drive_to_world[:, :, 1] = drive_unit_y_in_world
-        drive_rotmat_drive_to_world[:, :, 2] = drive_unit_z_in_world
-        drive_quat_drive_to_world = roma.rotmat_to_unitquat(drive_rotmat_drive_to_world)
+        self.drive_rotmat_drive_to_world[:, :, 0] = drive_unit_x_in_world
+        self.drive_rotmat_drive_to_world[:, :, 1] = drive_unit_y_in_world
+        self.drive_rotmat_drive_to_world[:, :, 2] = drive_unit_z_in_world
+        drive_quat_drive_to_world = roma.rotmat_to_unitquat(self.drive_rotmat_drive_to_world)
         T_drive_to_world = torch.zeros(num_data, 4, 4, device=self.device)
-        T_drive_to_world[:, :3, :3] = drive_rotmat_drive_to_world
-        T_drive_to_world[:, :3, 3] = drive_pos_in_world
+        T_drive_to_world[:, :3, :3] = self.drive_rotmat_drive_to_world
+        T_drive_to_world[:, :3, 3] = self.drive_pos_in_world
         T_drive_to_world[:, 3, 3] = 1.0
         T_world_to_drive = inverse_homogeneous_transform(T_drive_to_world)
 
@@ -339,7 +339,7 @@ class DataProcessorGoat:
         T_world_to_robot = inverse_homogeneous_transform(T_robot_to_world)
 
         # Transform p into robot centric frame
-        p_in_robot = world_to_robot_frame_transform(p_in_world, T_world_to_robot)
+        p_in_robot = world_to_robot_frame_transform(self.p_in_world, T_world_to_robot)
 
         sI = 0
         output_tensor[:, sI : sI + num_points * 3] = p_in_robot.reshape(num_data, num_points * 3)
@@ -350,11 +350,12 @@ class DataProcessorGoat:
         sI += 3
 
         ## Base Velocity following robot_vel_in_robot
-        robot_vel_in_world = (drive_pos_in_world[1:] - drive_pos_in_world[:-1]) / 0.05  # dt = 1/20
+        robot_vel_in_world = (self.drive_pos_in_world[1:] - self.drive_pos_in_world[:-1]) / 0.05  # dt = 1/20
         robot_vel_in_robot = torch.matmul(T_world_to_drive[1:, :3, :3], robot_vel_in_world.unsqueeze(-1)).squeeze()
         robot_vel_in_robot = ema_2d_optimized(robot_vel_in_robot)
         output_tensor[1:, sI : sI + 3] = robot_vel_in_robot
         output_tensor[0, sI : sI + 3] = output_tensor[1, sI : sI + 3]  # We just fill the first velocity
+        data["/ground_truth/twist_linear_x"] = output_tensor[:, sI]
         sI += 3
 
         ## Angular Velocity following [0 w] = 2 * q_dot X q_inv
@@ -363,6 +364,7 @@ class DataProcessorGoat:
         euler_velocity_in_robot = ema_2d_optimized(euler_velocity_in_robot)
         output_tensor[1:, sI : sI + 3] = euler_velocity_in_robot.squeeze()
         output_tensor[0, sI : sI + 3] = output_tensor[1, sI : sI + 3]  # We just fill the first velocity
+        data["/ground_truth/twist_angular_z"] = output_tensor[:, sI + 2]
 
         ## Angular velocity following rotation skew matrix method
         # euler_velocity_in_world = rotation_matrix_to_angular_velocity(drive_rotmat_drive_to_world, 0.05)
