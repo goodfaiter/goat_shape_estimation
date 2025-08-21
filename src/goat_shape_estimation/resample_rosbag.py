@@ -21,6 +21,14 @@ def extract_message_data(msg):
         data["linear_acceleration_y"] = msg.linear_acceleration.y
         data["linear_acceleration_z"] = msg.linear_acceleration.z
 
+    if hasattr(msg, "linear") and hasattr(msg, "angular"):
+        data["linear_x"] = msg.linear.x
+        data["linear_y"] = msg.linear.y
+        data["linear_z"] = msg.linear.z
+        data["angular_x"] = msg.angular.x
+        data["angular_y"] = msg.angular.y
+        data["angular_z"] = msg.angular.z
+
     if hasattr(msg, "data"):
         if isinstance(msg.data, (list, np.ndarray)):
             for i, val in enumerate(msg.data):
@@ -130,7 +138,13 @@ topics = [
     "/current_consumption",
     "/tendon_length_node_1/tendon_length",
     "/tendon_length_node_2/tendon_length",
-    "/set_tendon_length/manual",
+    "/set_tendon_length/manual", 
+    "/desired_twist", 
+    "/estimated_twist", 
+    "/joy",
+    "/gravity_vector", 
+    "/frame_points",
+    "/estimated_width",
 ]
 
 bags_and_offsets = [
@@ -161,6 +175,26 @@ bags_and_offsets = [
     # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_43_41", 13),
     ("/workspace/data/2025_08_13/rosbag2_2025_08_13-12_11_45", 26),
 
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-12_11_45", 26),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-16_49_04", 23),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-16_49_43", 30),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-16_51_23", 27),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-17_22_15", 27),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-17_23_05", 9),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-17_23_48", 13),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42", 16),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_26_13", 12),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_29_52", 27),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_32_37", 15),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-14_27_38", 40),
+    ("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51", 40),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_30_24", 30),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_35_07", 30),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_36_03", 30),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32", 30),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_39_14", 30),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_41_31", 30),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_50_14", 30),
 ]
 
 for bag, offset in bags_and_offsets:
