@@ -64,13 +64,16 @@ class NoiseOffset(Noise):
     """Constant offset noise."""
 
     def _validate_params(self, offset=0.1):
-        pass  # No validation needed for offset
+        if offset <= 0:
+            raise ValueError("Offset has to be positive")
 
     def _set_params(self, offset=0.1):
         self.offset = offset
 
     def _generate_noise(self, tensor):
-        return torch.ones_like(tensor) * self.offset
+        dist = torch.distributions.Uniform(low=-1.0 * self.offset, high=self.offset)
+        # Note we want different offsets in every dimensions but same over the time series
+        return torch.ones_like(tensor) * dist.sample([tensor.shape[1]]).to(tensor.device)
 
 
 class NoiseSinusoidal(Noise):
