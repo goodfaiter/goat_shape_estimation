@@ -2,7 +2,7 @@ import torch
 import pandas as pd
 import numpy as np
 from helpers.data_processer import DataProcessorGoat
-from helpers.visualizer import visualize_3d_spline, plot_velocity_comparison
+from helpers.visualization.visualizer import visualize_3d_spline, plot_velocity_comparison, visualize_3d_spline_minimal
 
 # Load the traced model
 traced_model = torch.jit.load("/workspace/data/output/latest_lstm_model.pt", map_location="cpu")
@@ -11,6 +11,13 @@ data = pd.read_parquet("/workspace/data/2025_07_21/rosbag2_2025_07_22-10_54_41_g
 # data = pd.read_parquet("/workspace/data/2025_07_21/rosbag2_2025_07_21-14_16_19_goat_training.parquet")  # yaw in circle mode
 # data = pd.read_parquet("/workspace/data/2025_07_21/rosbag2_2025_07_22-09_41_22_goat_training.parquet")  # circle -> s but with broken front tendon
 # data = pd.read_parquet("/workspace/data/2025_07_21/rosbag2_2025_07_22-10_56_30_goat_training.parquet")  # circle -> s 
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-14_27_38_goat_training.parquet")  # circle -> ball -> circle
+data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51_goat_training.parquet")  # front fold w/o tendon
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_35_07_goat_training.parquet")  # rover
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_30_24_goat_training.parquet")  # circle
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_36_03_goat_training.parquet")  # ball
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_39_14_goat_training.parquet")  # front fold with tendon
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_41_31_goat_training.parquet")  # front fold w/o tendon
 
 device = device = torch.device("cpu")
 
