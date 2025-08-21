@@ -246,36 +246,36 @@ class DataProcessorGoat:
         num_data = data["/imu/data/orientation_w"].size
         data_tensor = torch.zeros([num_data, self.input_shape], dtype=torch.float, device=self.device)
         robot_rot_orientation_quat = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
-        robot_rot_orientation_quat[:, 0] = torch.tensor(data["/imu/data/orientation_x"], dtype=torch.float, device=self.device)
-        robot_rot_orientation_quat[:, 1] = torch.tensor(data["/imu/data/orientation_y"], dtype=torch.float, device=self.device)
-        robot_rot_orientation_quat[:, 2] = torch.tensor(data["/imu/data/orientation_z"], dtype=torch.float, device=self.device)
-        robot_rot_orientation_quat[:, 3] = torch.tensor(data["/imu/data/orientation_w"], dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat[:, 0] = torch.tensor(data["/imu/data/orientation_x"].values, dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat[:, 1] = torch.tensor(data["/imu/data/orientation_y"].values, dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat[:, 2] = torch.tensor(data["/imu/data/orientation_z"].values, dtype=torch.float, device=self.device)
+        robot_rot_orientation_quat[:, 3] = torch.tensor(data["/imu/data/orientation_w"].values, dtype=torch.float, device=self.device)
         robot_rot_orientation_rotmat = roma.unitquat_to_rotmat(robot_rot_orientation_quat)
         data_tensor[:, 0:3] = robot_rot_orientation_rotmat[:, :, 2]  # this is essentially rot_mat * [0 0 1].T
 
-        data_tensor[:, 3] = torch.tensor(data["/imu/data/angular_velocity_x"], dtype=torch.float, device=self.device)
-        data_tensor[:, 4] = torch.tensor(data["/imu/data/angular_velocity_y"], dtype=torch.float, device=self.device)
-        data_tensor[:, 5] = torch.tensor(data["/imu/data/angular_velocity_z"], dtype=torch.float, device=self.device)
+        data_tensor[:, 3] = torch.tensor(data["/imu/data/angular_velocity_x"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 4] = torch.tensor(data["/imu/data/angular_velocity_y"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 5] = torch.tensor(data["/imu/data/angular_velocity_z"].values, dtype=torch.float, device=self.device)
 
-        data_tensor[:, 6] = torch.tensor(data["/imu/data/linear_acceleration_x"], dtype=torch.float, device=self.device)
-        data_tensor[:, 7] = torch.tensor(data["/imu/data/linear_acceleration_y"], dtype=torch.float, device=self.device)
-        data_tensor[:, 8] = torch.tensor(data["/imu/data/linear_acceleration_z"], dtype=torch.float, device=self.device)
+        data_tensor[:, 6] = torch.tensor(data["/imu/data/linear_acceleration_x"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 7] = torch.tensor(data["/imu/data/linear_acceleration_y"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 8] = torch.tensor(data["/imu/data/linear_acceleration_z"].values, dtype=torch.float, device=self.device)
 
-        data_tensor[:, 9] = torch.tensor(data["/measured_velocity/data_0"], dtype=torch.float, device=self.device)
-        data_tensor[:, 10] = torch.tensor(data["/measured_velocity/data_1"], dtype=torch.float, device=self.device)
-        data_tensor[:, 11] = torch.tensor(data["/measured_velocity/data_2"], dtype=torch.float, device=self.device)
-        data_tensor[:, 12] = torch.tensor(data["/measured_velocity/data_3"], dtype=torch.float, device=self.device)
+        data_tensor[:, 9] = torch.tensor(data["/measured_velocity/data_0"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 10] = torch.tensor(data["/measured_velocity/data_1"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 11] = torch.tensor(data["/measured_velocity/data_2"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 12] = torch.tensor(data["/measured_velocity/data_3"].values, dtype=torch.float, device=self.device)
 
-        data_tensor[:, 13] = torch.tensor(data["/commanded_velocity/data_0"], dtype=torch.float, device=self.device)
-        data_tensor[:, 14] = torch.tensor(data["/commanded_velocity/data_1"], dtype=torch.float, device=self.device)
+        data_tensor[:, 13] = torch.tensor(data["/commanded_velocity/data_0"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 14] = torch.tensor(data["/commanded_velocity/data_1"].values, dtype=torch.float, device=self.device)
 
-        data_tensor[:, 15] = torch.tensor(data["/current_consumption/data_0"], dtype=torch.float, device=self.device)
-        data_tensor[:, 16] = torch.tensor(data["/current_consumption/data_1"], dtype=torch.float, device=self.device)
-        data_tensor[:, 17] = torch.tensor(data["/current_consumption/data_2"], dtype=torch.float, device=self.device)
-        data_tensor[:, 18] = torch.tensor(data["/current_consumption/data_3"], dtype=torch.float, device=self.device)
+        data_tensor[:, 15] = torch.tensor(data["/current_consumption/data_0"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 16] = torch.tensor(data["/current_consumption/data_1"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 17] = torch.tensor(data["/current_consumption/data_2"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 18] = torch.tensor(data["/current_consumption/data_3"].values, dtype=torch.float, device=self.device)
 
-        data_tensor[:, 19] = torch.tensor(data["/tendon_length_node_1/tendon_length/data"], dtype=torch.float, device=self.device)
-        data_tensor[:, 20] = torch.tensor(data["/tendon_length_node_2/tendon_length/data"], dtype=torch.float, device=self.device)
+        data_tensor[:, 19] = torch.tensor(data["/tendon_length_node_1/tendon_length/data"].values, dtype=torch.float, device=self.device)
+        data_tensor[:, 20] = torch.tensor(data["/tendon_length_node_2/tendon_length/data"].values, dtype=torch.float, device=self.device)
 
         return data_tensor
 
@@ -291,17 +291,17 @@ class DataProcessorGoat:
         self.p_in_world = torch.zeros([num_data, num_points, 3], dtype=torch.float, device=self.device)
         robot_pos_in_world = torch.zeros([num_data, 3], dtype=torch.float, device=self.device)
         robot_rot_orientation = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
-        robot_pos_in_world[:, 0] = torch.tensor(data["TEST_GOAT_Position_X"]) * 1.0e-3
-        robot_pos_in_world[:, 1] = torch.tensor(data["TEST_GOAT_Position_Y"]) * 1.0e-3
-        robot_pos_in_world[:, 2] = torch.tensor(data["TEST_GOAT_Position_Z"]) * 1.0e-3
-        robot_rot_orientation[:, 0] = torch.tensor(data["TEST_GOAT_Rotation_X"])
-        robot_rot_orientation[:, 1] = torch.tensor(data["TEST_GOAT_Rotation_Y"])
-        robot_rot_orientation[:, 2] = torch.tensor(data["TEST_GOAT_Rotation_Z"])
-        robot_rot_orientation[:, 3] = torch.tensor(data["TEST_GOAT_Rotation_W"])
+        robot_pos_in_world[:, 0] = torch.tensor(data["TEST_GOAT_Position_X"].values) * 1.0e-3
+        robot_pos_in_world[:, 1] = torch.tensor(data["TEST_GOAT_Position_Y"].values) * 1.0e-3
+        robot_pos_in_world[:, 2] = torch.tensor(data["TEST_GOAT_Position_Z"].values) * 1.0e-3
+        robot_rot_orientation[:, 0] = torch.tensor(data["TEST_GOAT_Rotation_X"].values)
+        robot_rot_orientation[:, 1] = torch.tensor(data["TEST_GOAT_Rotation_Y"].values)
+        robot_rot_orientation[:, 2] = torch.tensor(data["TEST_GOAT_Rotation_Z"].values)
+        robot_rot_orientation[:, 3] = torch.tensor(data["TEST_GOAT_Rotation_W"].values)
         for j in range(0, num_points):
-            self.p_in_world[:, j, 0] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_X"]) * 1.0e-3
-            self.p_in_world[:, j, 1] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Y"]) * 1.0e-3
-            self.p_in_world[:, j, 2] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Z"]) * 1.0e-3
+            self.p_in_world[:, j, 0] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_X"].values) * 1.0e-3
+            self.p_in_world[:, j, 1] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Y"].values) * 1.0e-3
+            self.p_in_world[:, j, 2] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Z"].values) * 1.0e-3
 
         # Offset positions by initial robot location
         # world_initial_pos = robot_pos_in_world[0, :] # We offset everything by a constant position. No mathematical reason, just easier to read the numbers
