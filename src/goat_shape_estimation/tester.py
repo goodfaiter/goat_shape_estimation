@@ -45,6 +45,7 @@ for i in range(num_data):
     # Points and Gravity
     if i % 100 == 0:
         estimated_points = output[:grav_index].view(num_points, 3)
+        # estimated_points = targets[i, :grav_index].view(num_points, 3)
         estimated_gravity = output[grav_index:vel_index]
         estimated_points_to_visualize[0, :, :] = estimated_points[[0, 1, 2, 3, 4, 5, 6, 7, 0], :]
         estimated_points_to_visualize[1, :, :] = estimated_points[[0, 8, 2, 9, 4, 10, 6, 11, 0], :]

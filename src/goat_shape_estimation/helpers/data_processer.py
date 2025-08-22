@@ -356,6 +356,8 @@ class DataProcessorGoat:
         output_tensor[1:, sI : sI + 3] = robot_vel_in_robot
         output_tensor[0, sI : sI + 3] = output_tensor[1, sI : sI + 3]  # We just fill the first velocity
         data["/ground_truth/twist_linear_x"] = output_tensor[:, sI]
+        data["/ground_truth/twist_linear_y"] = output_tensor[:, sI + 1]
+        data["/ground_truth/twist_linear_z"] = output_tensor[:, sI + 2]
         sI += 3
 
         ## Angular Velocity following [0 w] = 2 * q_dot X q_inv
@@ -364,6 +366,8 @@ class DataProcessorGoat:
         euler_velocity_in_robot = ema_2d_optimized(euler_velocity_in_robot)
         output_tensor[1:, sI : sI + 3] = euler_velocity_in_robot.squeeze()
         output_tensor[0, sI : sI + 3] = output_tensor[1, sI : sI + 3]  # We just fill the first velocity
+        data["/ground_truth/twist_angular_x"] = output_tensor[:, sI + 0]
+        data["/ground_truth/twist_angular_y"] = output_tensor[:, sI + 1]
         data["/ground_truth/twist_angular_z"] = output_tensor[:, sI + 2]
 
         ## Angular velocity following rotation skew matrix method

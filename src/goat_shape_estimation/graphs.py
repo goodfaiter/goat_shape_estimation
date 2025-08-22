@@ -101,17 +101,17 @@ def top_down_view(datas):
     plot_trajectories(drive_pos_in_world[:, :min_input, :], labels=['Open Loop 1', 'Open Loop 2', 'Open Loop 3', 'Closed Loop 1', 'Closed Loop 2', 'Closed Loop 3'], ylim=[-1.25, 0.5])
 
 
-def yaw_tracking(datas, dur, labels):
+def yaw_tracking(datas, dur, title="Yaw Rate Tracking", labels = None):
     yaw_rates = []
     for data, to_plot_dict in datas:
         data_processor = DataProcessorGoat(DEVICE)
         data_processor.process_input_data(data)
         data_processor.process_output_data(data)
         for name, start in to_plot_dict.items():
-            if name is '/imu/data/angular_velocity_z':
+            if name == '/imu/data/angular_velocity_z':
                 data[name] *= -1.0
             yaw_rates.append(data[name][start:start + dur])
-    plot_time_series(yaw_rates, labels=labels, title="Yaw Rate Tracking", xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=[-0.1, 1.25])
+    plot_time_series(yaw_rates, labels=labels, title=title, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=[-0.1, 1.25])
 
 
 def x_tracking(datas, dur, labels):
@@ -154,6 +154,50 @@ def plot_minimal_shape(data):
                 estimated_gravity,
             )
 
+def calculate_rmse_reconstruction(data):
+    seq_length = 50
+    data_processor = DataProcessorGoat(DEVICE)
+    inputs = data_processor.process_input_data(data)
+    targets = data_processor.process_output_data(data)
+    num_data = inputs.shape[0]
+    ground_truth_points = np.zeros([num_data - seq_length, NUM_POINTS, 3])
+    estimated_points = np.zeros([num_data - seq_length, NUM_POINTS, 3])
+    for t in range(seq_length, num_data):
+        for i in range(NUM_POINTS):
+            for j in range(3):
+                estimated_points[t - seq_length][i][j] = data[f'/frame_points/data_{i*3 + j}'].values[t]
+                ground_truth_points[t-seq_length] = targets[t, :INDEX_GRAVITY].view(NUM_POINTS, 3).detach().numpy()
+    dist = np.linalg.norm(estimated_points - ground_truth_points, axis=2)
+
+    # this
+    # rmse_per_timestep = np.sqrt(np.mean((dist)**2, axis=1))
+    # rmse = np.sqrt(np.mean((rmse_per_timestep)**2))
+    # or
+    rmse = np.sqrt(np.mean((dist)**2))
+    return rmse
+
+def calculate_rmse_twist_reconstruction(data):
+    seq_length = 50
+    data_processor = DataProcessorGoat(DEVICE)
+    inputs = data_processor.process_input_data(data)
+    targets = data_processor.process_output_data(data)
+    num_data = inputs.shape[0]
+    estimated_twist = np.zeros([num_data - seq_length, 6])
+    ground_truth_twist = np.zeros([num_data - seq_length, 6])
+    estimated_twist[:, 0] = data['/estimated_twist/linear_x'].values[seq_length:] * 1000
+    estimated_twist[:, 1] = data['/estimated_twist/linear_y'].values[seq_length:] * 1000
+    estimated_twist[:, 2] = data['/estimated_twist/linear_z'].values[seq_length:] * 1000
+    estimated_twist[:, 3] = data['/estimated_twist/angular_x'].values[seq_length:]
+    estimated_twist[:, 4] = data['/estimated_twist/angular_y'].values[seq_length:]
+    estimated_twist[:, 5] = data['/estimated_twist/angular_z'].values[seq_length:]
+    ground_truth_twist[:, 0] = data['/ground_truth/twist_linear_x'].values[seq_length:] * 1000
+    ground_truth_twist[:, 1] = data['/ground_truth/twist_linear_y'].values[seq_length:] * 1000
+    ground_truth_twist[:, 2] = data['/ground_truth/twist_linear_z'].values[seq_length:] * 1000
+    ground_truth_twist[:, 3] = data['/ground_truth/twist_angular_x'].values[seq_length:]
+    ground_truth_twist[:, 4] = data['/ground_truth/twist_angular_y'].values[seq_length:]
+    ground_truth_twist[:, 5] = data['/ground_truth/twist_angular_z'].values[seq_length:]
+    return np.sqrt(np.mean((estimated_twist-ground_truth_twist)**2, axis=0))
+
 # test_graphs(datas[0])
 
 # Top Down View
@@ -179,7 +223,7 @@ def plot_minimal_shape(data):
 # Linear Velocity Estimation
 # datas = [
 #     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_32_37_goat_training.parquet"), {'/desired_twist/linear_x': 70}),
-#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_32_37_goat_training.parquet"), {'/estimated_twist/linear_x': 69}),
+#     (pd.read_parquet("/workspace/data/2025_08_13/roerror - errorsbag2_2025_08_13-14_32_37_goat_training.parquet"), {'/estimated_twist/linear_x': 69}),
 #     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_32_37_goat_training.parquet"), {'/ground_truth/twist_linear_x': 70}),
 # ]
 # x_tracking(datas, 60, labels=['Desired', 'Estimated Linear Forward Velocity', 'Ground Truth Linear Forward Velocity'])
@@ -191,14 +235,62 @@ def plot_minimal_shape(data):
 #     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1183}),
 #     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/imu/data/angular_velocity_z': 1183}),
 # ]
-# yaw_tracking(datas, 80, labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'IMU Yaw Rate'])
+# yaw_tracking(datas, 80, title="Yaw Rate Estimation", labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'IMU Yaw Rate'])
 
 # Plot Shape
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51_goat_training.parquet")  # front fold w/o tendon but was trained on it
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_30_24_goat_training.parquet")  # circle
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_35_07_goat_training.parquet")  # rover
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_39_14_goat_training.parquet")  # front fold with tendon
-data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_41_31_goat_training.parquet")  # front fold w/o tendon
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_41_31_goat_training.parquet")  # front fold w/o tendon
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_36_03_goat_training.parquet")  # rover to ball
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet")  # ball to circle
-plot_minimal_shape(data)
+# plot_minimal_shape(data)
+
+# rmse = calculate_rmse_reconstruction(pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_30_24_goat_training.parquet")) * 1000
+# print(f" RMSE: Circle: {rmse:.3}")
+# rmse = calculate_rmse_reconstruction(pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_35_07_goat_training.parquet")) * 1000
+# print(f" RMSE: Rover: {rmse:.3}")
+# rmse = calculate_rmse_reconstruction(pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet")) * 1000
+# print(f" RMSE: Ball: {rmse:.3}")
+# rmse = calculate_rmse_reconstruction(pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_39_14_goat_training.parquet")) * 1000
+# print(f" RMSE: Front Fold w/ Tendon: {rmse:.3}")
+# rmse = calculate_rmse_reconstruction(pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_41_31_goat_training.parquet")) * 1000
+# print(f" RMSE: Front Fold w/o Tendon: {rmse:.3}")
+
+# rmse = calculate_rmse_twist_reconstruction(pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"))  # rot with and without PID with frame
+# print(f" RMSE: X Rate Estimation: {rmse[0]:.3}")
+# print(f" RMSE: Y Rate Estimation: {rmse[1]:.3}")
+# print(f" RMSE: Z Rate Estimation: {rmse[2]:.3}")
+# print(f" RMSE: Roll Rate Estimation: {rmse[3]:.3}")
+# print(f" RMSE: Pitch Rate Estimation: {rmse[4]:.3}")
+# print(f" RMSE: Yaw Rate Estimation: {rmse[5]:.3}")
+
+# rmse = calculate_rmse_twist_reconstruction(pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_32_37_goat_training.parquet"))  # forward PID
+# print(f" RMSE: X Rate Estimation: {rmse[0]:.3}")
+# print(f" RMSE: Y Rate Estimation: {rmse[1]:.3}")
+# print(f" RMSE: Z Rate Estimation: {rmse[2]:.3}")
+# print(f" RMSE: Roll Rate Estimation: {rmse[3]:.3}")
+# print(f" RMSE: Pitch Rate Estimation: {rmse[4]:.3}")
+# print(f" RMSE: Yaw Rate Estimation: {rmse[5]:.3}")
+
+# rmse = calculate_rmse_twist_reconstruction(pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-17_22_15_goat_training.parquet"))  # forward with yaw PID broken drive
+# print(f" RMSE: X Rate Estimation: {rmse[0]:.3}")
+# print(f" RMSE: Y Rate Estimation: {rmse[1]:.3}")
+# print(f" RMSE: Z Rate Estimation: {rmse[2]:.3}")
+# print(f" RMSE: Roll Rate Estimation: {rmse[3]:.3}")
+# print(f" RMSE: Pitch Rate Estimation: {rmse[4]:.3}")
+# print(f" RMSE: Yaw Rate Estimation: {rmse[5]:.3}")
+
+# rec = np.array([143, 74, 199, 151, 287])
+# print(rec.mean(), rec.std())
+
+# table = np.array([[14.7, 11.6, 4.69], [29.7, 25.4, 4.54], [16.9, 26.6, 6.04]])
+# print('top down means', table.mean(axis=1))
+# print('left to right means', table.mean(axis=0))
+# print('left to right std', table.std(axis=0))
+
+table = np.array([[0.02, 0.02, 0.10], [0.02, 0.02, 0.06], [0.03, 0.02, 0.05]])
+print('top down means', table.mean(axis=1))
+print('left to right means', table.mean(axis=0))
+print('left to right std', table.std(axis=0))
