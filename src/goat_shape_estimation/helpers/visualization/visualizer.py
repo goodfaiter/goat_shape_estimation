@@ -286,7 +286,8 @@ def plot_time_series(data, labels=None, title="Yaw Rate Tracking", xlabel="Time 
         plt.scatter(x_coords[0], y_coords[0], color=colors[i], s=100, marker='o', edgecolors='black')
         plt.scatter(x_coords[-1], y_coords[-1], color=colors[i], s=100, marker='s', edgecolors='black')
     
-    plt.title(title, fontsize=20)
+    if title:
+        plt.title(title, fontsize=20)
     plt.xlabel(xlabel, fontsize=16)
     plt.ylabel(ylabel, fontsize=16)
     plt.grid(True, alpha=0.3)

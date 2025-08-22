@@ -1,7 +1,7 @@
 import torch
 import pandas as pd
 import numpy as np
-from helpers.data_processer import DataProcessorGoat
+from helpers.data_processer import DataProcessorGoat, ema_2d_optimized
 from helpers.visualization.visualizer import visualize_3d_spline, plot_velocity_comparison, plot_trajectories, plot_time_series, visualize_3d_spline_minimal
 
 NUM_POINTS = 12
@@ -13,7 +13,34 @@ NUM_OUTPUT = INDEX_VELOCITY + 6
 INDICES_RING_ONE = [0, 1, 2, 3, 4, 5, 6, 7, 0]
 INDICES_RING_TWO = [0, 8, 2, 9, 4, 10, 6, 11, 0]
 DEVICE = torch.device("cpu")
+MODEL_PATH = "/workspace/data/output/2025_08_22_11_19_04/2025_08_22_11_19_04_best_lstm_model.pt"
 
+def simulate_data_with_model(model_path, data):
+    device = device = torch.device("cpu")
+    num_data = data["/imu/data/orientation_w"].size
+    traced_model = torch.jit.load(model_path, map_location="cpu")
+    data_processor_goat = DataProcessorGoat(device)
+    inputs = data_processor_goat.process_input_data(data)
+    outputs = np.zeros([num_data, NUM_OUTPUT])
+    for i in range(num_data):
+        outputs[i, :] = traced_model(inputs[i, :].unsqueeze(0).unsqueeze(0))[0, -1, :].numpy()
+
+    for j in range(NUM_POINTS * 3):
+        data[f"/frame_points/data_{j}"] = outputs[:, INDEX_POINTS + j]
+    data[f"/gravity_vector/data_{0}"] = outputs[:, INDEX_GRAVITY + 0]
+    data[f"/gravity_vector/data_{1}"] = outputs[:, INDEX_GRAVITY + 1]
+    data[f"/gravity_vector/data_{2}"] = outputs[:, INDEX_GRAVITY + 2]
+    data[f"/estimated_twist/linear_x"] = outputs[:, INDEX_VELOCITY + 0]
+    data[f"/estimated_twist/linear_y"] = outputs[:, INDEX_VELOCITY + 1]
+    data[f"/estimated_twist/linear_z"] = outputs[:, INDEX_VELOCITY + 2]
+    data[f"/estimated_twist/angular_x"] = outputs[:, INDEX_VELOCITY + 3]
+    data[f"/estimated_twist/angular_y"] = outputs[:, INDEX_VELOCITY + 4]
+    data[f"/estimated_twist/angular_z"] = outputs[:, INDEX_VELOCITY + 5]
+
+    # frame_points = outputs[:, INDEX_POINTS:INDEX_GRAVITY].reshape(-1, NUM_POINTS, 3)
+    # avg_distance = np.mean(frame_points[:, [1, 3, 8, 9], :], axis = 1) - np.mean(frame_points[:,[5, 7, 10, 11], :], axis=1)
+    # frame_width = np.linalg.norm(avg_distance, axis = 1) - 0.1 # 0.1 comes from the 5 [cm] x 2 marker to wheel offset
+    # data['/estimated_width/data'] = frame_width
 
 def load_model_outputs(data):
     num_data = data["/imu/data/orientation_w"].size
@@ -111,6 +138,8 @@ def yaw_tracking(datas, dur, title="Yaw Rate Tracking", labels = None):
             if name == '/imu/data/angular_velocity_z':
                 data[name] *= -1.0
             yaw_rates.append(data[name][start:start + dur])
+            # test = ema_2d_optimized(data[name][start:start + dur])
+            # yaw_rates[-1] = ema_2d_optimized(torch.tensor([yaw_rates[-1]])).detach().numpy()
     plot_time_series(yaw_rates, labels=labels, title=title, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=[-0.1, 1.25])
 
 
@@ -120,6 +149,8 @@ def x_tracking(datas, dur, labels):
         data_processor = DataProcessorGoat(DEVICE)
         data_processor.process_input_data(data)
         data_processor.process_output_data(data)
+        # Do this or ignore to use rosbag data.
+        # simulate_data_with_model(MODEL_PATH, data)
         for name, start in to_plot_dict.items():
             rates.append(data[name][start:start + dur])
     plot_time_series(rates, labels=labels, title="Linear Velocity Tracking", xlabel="Time [s]", ylabel="Velocity [m/s]", ylim=[-0.1, 0.5])
@@ -160,6 +191,8 @@ def calculate_rmse_reconstruction(data):
     inputs = data_processor.process_input_data(data)
     targets = data_processor.process_output_data(data)
     num_data = inputs.shape[0]
+    # Do this or ignore to use rosbag data.
+    # simulate_data_with_model(MODEL_PATH, data)
     ground_truth_points = np.zeros([num_data - seq_length, NUM_POINTS, 3])
     estimated_points = np.zeros([num_data - seq_length, NUM_POINTS, 3])
     for t in range(seq_length, num_data):
@@ -182,6 +215,8 @@ def calculate_rmse_twist_reconstruction(data):
     inputs = data_processor.process_input_data(data)
     targets = data_processor.process_output_data(data)
     num_data = inputs.shape[0]
+    # Do this or ignore to use rosbag data.
+    simulate_data_with_model(MODEL_PATH, data)
     estimated_twist = np.zeros([num_data - seq_length, 6])
     ground_truth_twist = np.zeros([num_data - seq_length, 6])
     estimated_twist[:, 0] = data['/estimated_twist/linear_x'].values[seq_length:] * 1000
@@ -197,6 +232,20 @@ def calculate_rmse_twist_reconstruction(data):
     ground_truth_twist[:, 4] = data['/ground_truth/twist_angular_y'].values[seq_length:]
     ground_truth_twist[:, 5] = data['/ground_truth/twist_angular_z'].values[seq_length:]
     return np.sqrt(np.mean((estimated_twist-ground_truth_twist)**2, axis=0))
+
+
+def plot_morphing(data):
+    seq_length = 50
+    data_processor = DataProcessorGoat(DEVICE)
+    inputs = data_processor.process_input_data(data)
+    targets = data_processor.process_output_data(data)
+    num_data = inputs.shape[0]
+    simulate_data_with_model(MODEL_PATH, data)
+    series = []
+    series.append(data['/estimated_width/data'].values)
+    series.append(data['/tendon_length_node_1/tendon_length/data'].values)
+    series.append(data['/tendon_length_node_2/tendon_length/data'].values)
+    plot_time_series(series, labels=["Estimated Width", "Tendon Length 1", "Tendon Length 2"], title=None, xlabel="Time [s]", ylabel="[m]", ylim=None)
 
 # test_graphs(datas[0])
 
@@ -229,13 +278,13 @@ def calculate_rmse_twist_reconstruction(data):
 # x_tracking(datas, 60, labels=['Desired', 'Estimated Linear Forward Velocity', 'Ground Truth Linear Forward Velocity'])
 
 # Yaw Rate Estimation
-# datas = [
-#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/desired_twist/angular_z': 1183}),
-#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/estimated_twist/angular_z': 1183}),
-#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1183}),
-#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/imu/data/angular_velocity_z': 1183}),
-# ]
-# yaw_tracking(datas, 80, title="Yaw Rate Estimation", labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'IMU Yaw Rate'])
+datas = [
+    (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/desired_twist/angular_z': 1183}),
+    (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/estimated_twist/angular_z': 1183}),
+    (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1183}),
+    (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/imu/data/angular_velocity_z': 1183}),
+]
+yaw_tracking(datas, 80, title="Yaw Rate Estimation", labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'IMU Yaw Rate'])
 
 # Plot Shape
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51_goat_training.parquet")  # front fold w/o tendon but was trained on it
@@ -290,7 +339,10 @@ def calculate_rmse_twist_reconstruction(data):
 # print('left to right means', table.mean(axis=0))
 # print('left to right std', table.std(axis=0))
 
-table = np.array([[0.02, 0.02, 0.10], [0.02, 0.02, 0.06], [0.03, 0.02, 0.05]])
-print('top down means', table.mean(axis=1))
-print('left to right means', table.mean(axis=0))
-print('left to right std', table.std(axis=0))
+# table = np.array([[0.02, 0.02, 0.10], [0.02, 0.02, 0.06], [0.03, 0.02, 0.05]])
+# print('top down means', table.mean(axis=1))
+# print('left to right means', table.mean(axis=0))
+# print('left to right std', table.std(axis=0))
+
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet")
+# plot_morphing(data)
