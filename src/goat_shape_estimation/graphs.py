@@ -216,7 +216,7 @@ def calculate_rmse_twist_reconstruction(data):
     targets = data_processor.process_output_data(data)
     num_data = inputs.shape[0]
     # Do this or ignore to use rosbag data.
-    simulate_data_with_model(MODEL_PATH, data)
+    # simulate_data_with_model(MODEL_PATH, data)
     estimated_twist = np.zeros([num_data - seq_length, 6])
     ground_truth_twist = np.zeros([num_data - seq_length, 6])
     estimated_twist[:, 0] = data['/estimated_twist/linear_x'].values[seq_length:] * 1000
@@ -240,7 +240,18 @@ def plot_morphing(data):
     inputs = data_processor.process_input_data(data)
     targets = data_processor.process_output_data(data)
     num_data = inputs.shape[0]
+    # Do this or ignore to use rosbag data.
     simulate_data_with_model(MODEL_PATH, data)
+    ground_truth_points = np.zeros([num_data - seq_length, NUM_POINTS, 3])
+    estimated_points = np.zeros([num_data - seq_length, NUM_POINTS, 3])
+    for t in range(seq_length, num_data):
+        for i in range(NUM_POINTS):
+            for j in range(3):
+                estimated_points[t - seq_length][i][j] = data[f'/frame_points/data_{i*3 + j}'].values[t]
+        ground_truth_points[t - seq_length] = targets[t, :INDEX_GRAVITY].view(NUM_POINTS, 3).detach().numpy()
+    dist = np.linalg.norm(estimated_points - ground_truth_points, axis=2) * 1000
+    rmse = np.sqrt(np.mean((dist)**2, axis=1))
+
     series = []
     series.append(data['/estimated_width/data'].values)
     series.append(data['/tendon_length_node_1/tendon_length/data'].values)
