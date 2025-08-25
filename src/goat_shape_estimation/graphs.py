@@ -289,13 +289,13 @@ def plot_morphing(data):
 # x_tracking(datas, 60, labels=['Desired', 'Estimated Linear Forward Velocity', 'Ground Truth Linear Forward Velocity'])
 
 # Yaw Rate Estimation
-datas = [
-    (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/desired_twist/angular_z': 1183}),
-    (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/estimated_twist/angular_z': 1183}),
-    (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1183}),
-    (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/imu/data/angular_velocity_z': 1183}),
-]
-yaw_tracking(datas, 80, title="Yaw Rate Estimation", labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'IMU Yaw Rate'])
+# datas = [
+#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/desired_twist/angular_z': 1183}),
+#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/estimated_twist/angular_z': 1183}),
+#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1183}),
+#     (pd.read_parquet("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"), {'/imu/data/angular_velocity_z': 1183}),
+# ]
+# yaw_tracking(datas, 80, title="Yaw Rate Estimation", labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'IMU Yaw Rate'])
 
 # Plot Shape
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51_goat_training.parquet")  # front fold w/o tendon but was trained on it
@@ -355,5 +355,5 @@ yaw_tracking(datas, 80, title="Yaw Rate Estimation", labels=['Desired', 'Estimat
 # print('left to right means', table.mean(axis=0))
 # print('left to right std', table.std(axis=0))
 
-# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet")
-# plot_morphing(data)
+data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet")
+plot_morphing(data)
