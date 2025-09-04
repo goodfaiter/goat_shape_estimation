@@ -6,8 +6,9 @@ from abc import ABC, abstractmethod
 class Noise(ABC):
     """Base class for noise generation."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, index = None, **kwargs):
         super().__init__()
+        self._index = index
         self._validate_params(**kwargs)
         self._set_params(**kwargs)
 
@@ -41,8 +42,13 @@ class Noise(ABC):
         if tensor.dim() != 2:
             raise ValueError("Input tensor must be 2D with shape [T, D]")
 
-        noise = self._generate_noise(tensor)
-        return tensor + noise
+        noisy_tensor = torch.empty_like(tensor).copy_(tensor)
+        
+        if self._index is None:
+            return noisy_tensor
+        
+        noisy_tensor[:, self._index] += self._generate_noise(tensor)
+        return noisy_tensor
 
 
 class NoiseGaussian(Noise):
@@ -73,7 +79,7 @@ class NoiseOffset(Noise):
     def _generate_noise(self, tensor):
         dist = torch.distributions.Uniform(low=-1.0 * self.offset, high=self.offset)
         # Note we want different offsets in every dimensions but same over the time series
-        return torch.ones_like(tensor) * dist.sample([tensor.shape[1]]).to(tensor.device)
+        return torch.ones_like(tensor[:, self._index]) * dist.sample([len(self._index)]).to(tensor.device)
 
 
 class NoiseSinusoidal(Noise):

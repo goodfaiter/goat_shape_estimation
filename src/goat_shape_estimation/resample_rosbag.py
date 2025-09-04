@@ -173,9 +173,16 @@ bags_and_offsets = [
     # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_17_39", 27),
     # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_19_01", 19),
     # ("/workspace/data/2025_08_12/rosbag2_2025_08_12-17_43_41", 13),
-    ("/workspace/data/2025_08_13/rosbag2_2025_08_13-12_11_45", 26),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-12_11_45", 26),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-14_27_38", 37),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-14_30_44", 26),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51", 25), # a guess on the offset
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_16_50", 25),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_17_47", 27),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_18_50", 27),
 
     # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-12_11_45", 26),
+    # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_33_19", 23),
     # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-16_49_04", 23),
     # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-16_49_43", 30),
     # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-16_51_23", 27),
@@ -187,7 +194,7 @@ bags_and_offsets = [
     # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_29_52", 27),
     # ("/workspace/data/2025_08_13/rosbag2_2025_08_13-14_32_37", 15),
     # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-14_27_38", 40),
-    ("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51", 40),
+    # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51", 40),
     # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_30_24", 30),
     # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_35_07", 30),
     # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_36_03", 30),
@@ -195,6 +202,12 @@ bags_and_offsets = [
     # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_39_14", 30),
     # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_41_31", 30),
     # ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_50_14", 30),
+    # ("/workspace/data/2025_09_03/rosbag2_2025_09_03-14_32_04", -37),
+    # ("/workspace/data/2025_09_03/rosbag2_2025_09_03-14_37_20", -37),
+    # ("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38", -37),
+    # ("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_10_07", -37),
+    # ("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_12_23", -37),
+    ("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_21_15", -37),
 ]
 
 for bag, offset in bags_and_offsets:

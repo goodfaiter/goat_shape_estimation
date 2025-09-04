@@ -5,6 +5,11 @@ from scipy.interpolate import CubicSpline
 from mpl_toolkits.mplot3d import Axes3D
 
 # matplotlib.use('qtagg')
+LINEWIDTH = 1 # 3 for overleaf
+LABELS_FONT = 14 # 14 stadard, 30 for overleaf
+plt.rcParams['font.family'] = 'Times New Roman'
+plt.rcParams['font.size'] = LABELS_FONT
+DPI = 100 # 100 stanard, 500 for overleaf
 
 def visualize_3d_spline(points_set, down_vec, text, filename):
     """
@@ -15,7 +20,7 @@ def visualize_3d_spline(points_set, down_vec, text, filename):
     """
         
     # Create minimap-style 3D plot
-    fig = plt.figure(figsize=(6, 6), dpi=100)
+    fig = plt.figure(figsize=(6, 6), dpi=DPI)
     ax = fig.add_subplot(111, projection='3d')
 
     spline_colors = ['b-', 'y-']
@@ -41,10 +46,36 @@ def visualize_3d_spline(points_set, down_vec, text, filename):
         z_smooth = cs_z(t_smooth)
         
         # Plot spline curve
-        ax.plot(x_smooth, y_smooth, z_smooth, spline_colors[i], linewidth=2, label='Spline Fit')
+        ax.plot(x_smooth, y_smooth, z_smooth, spline_colors[i], linewidth=LINEWIDTH, label='Spline Fit')
     
         # Plot original points
-        ax.scatter(x, y, z, c='r', s=50, label='Control Points')
+        # ax.scatter(x, y, z, c='r', s=50, label='Control Points')
+    
+    # Unpack points
+    for i, points in enumerate(points_set):
+        x = [p[0] for p in points]
+        y = [p[1] for p in points]
+        z = [p[2] for p in points]
+        
+        # Create parameter for interpolation (arc length approximation)
+        t = np.linspace(0, 1, len(x))
+        t_smooth = np.linspace(0, 1, 300)
+        
+        # Create cubic spline interpolation for each dimension
+        cs_x = CubicSpline(t, x, bc_type='natural')
+        cs_y = CubicSpline(t, y, bc_type='natural')
+        cs_z = CubicSpline(t, z, bc_type='natural')
+        
+        # Generate smooth curve
+        x_smooth = cs_x(t_smooth)
+        y_smooth = cs_y(t_smooth)
+        z_smooth = cs_z(t_smooth)
+        
+        # Plot spline curve
+        # ax.plot(x_smooth, y_smooth, z_smooth, spline_colors[i], linewidth=LINEWIDTH, label='Spline Fit')
+    
+        # Plot original points
+        ax.scatter(x, y, z, c='r', s=50, label='Frame Points (Mocap Markers)')
 
     # Origin point
     origin = [0, 0, 0]
@@ -62,19 +93,19 @@ def visualize_3d_spline(points_set, down_vec, text, filename):
 
     # Plot each vector
     for vec, color, label in zip(vectors, colors, labels):
-        ax.quiver(*origin, *vec, color=color, arrow_length_ratio=0.1, linewidth=2, label=label + '-axis')
+        ax.quiver(*origin, *vec, color=color, arrow_length_ratio=0.1, linewidth=LINEWIDTH, label=label + '-axis')
     
     # Minimap styling
     ax.set_xticks(np.linspace(-0.5, 0.5, 5))
     ax.set_yticks(np.linspace(-0.5, 0.5, 5))
     ax.set_zticks(np.linspace(-0.5, 0.5, 5))
-    ax.tick_params(labelsize=8)
-    ax.set_title('Spline Fitting ' + text, fontsize=10)
-    ax.legend(fontsize=8)
+    ax.tick_params(labelsize=LABELS_FONT)
+    ax.set_title('Spline Fitting ' + text, fontsize=LABELS_FONT)
+    ax.legend(fontsize=LABELS_FONT)
     
     # Save to file
     # plt.tight_layout()
-    # plt.savefig(filename, dpi=150, bbox_inches='tight')
+    # plt.savefig(filename, dpi=DPI, bbox_inches='tight')
     # plt.close()  # Close the figure to free memory
     
     # Show
@@ -122,22 +153,24 @@ def visualize_3d_spline_minimal(points_set, down_vec):
         z_smooth = cs_z(t_smooth)
         
         # Plot spline curve and points
-        ax.plot(x_smooth, y_smooth, z_smooth, spline_colors[i], linewidth=2)
+        ax.plot(x_smooth, y_smooth, z_smooth, spline_colors[i], linewidth=LINEWIDTH, label='Spline Fit')
         ax.scatter(x, y, z, c='r', s=50)
     
-    # Plot coordinate vectors
+    # # Plot coordinate vectors
     origin = [0, 0, 0]
-    vectors = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], down_vec]) * 0.1
+    vectors = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], down_vec]) * 0.2
     colors = ['red', 'green', 'blue', 'black']
+    labels = ['X', 'Y', 'Z', 'Gravity']
     
-    for vec, color in zip(vectors, colors):
-        ax.quiver(*origin, *vec, color=color, arrow_length_ratio=0.1, linewidth=2)
+    for vec, color, label in zip(vectors, colors, labels):
+        ax.quiver(*origin, *vec, color=color, arrow_length_ratio=0.1, linewidth=LINEWIDTH, label=label + '-axis')
     
     # Remove axis ticks and grid
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_zticks([])
     ax.grid(False)
+    ax.legend()
     plt.axis('equal')
     
     plt.show()
@@ -181,7 +214,7 @@ def plot_velocity_comparison(estimated_vel, ground_truth_vel, time_axis=None, ti
     plt.tight_layout()
     plt.show()
 
-def plot_trajectories(data, labels=None, title="2D Trajectories", xlabel="Travel Distance [m]", ylabel="Deviation from Straight Line [m]", ylim = None):
+def plot_trajectories(data, labels, linestyle, title="2D Trajectories", xlabel="Travel Distance [m]", ylabel="Deviation from Straight Line [m]", ylim = None, filename=""):
     """
     Plot multiple 2D trajectories on a single graph.
     
@@ -204,7 +237,7 @@ def plot_trajectories(data, labels=None, title="2D Trajectories", xlabel="Travel
     plt.figure(figsize=(10, 8))
     
     # Create a colormap for different trajectories
-    colors = plt.cm.viridis(np.linspace(0, 1, M))
+    colors = plt.cm.Paired(np.linspace(0, 1, M))
     
     for i in range(M):
         trajectory = data[i]
@@ -212,38 +245,43 @@ def plot_trajectories(data, labels=None, title="2D Trajectories", xlabel="Travel
         y_coords = trajectory[:, 1]
         
         # Plot the trajectory
-        if labels:
-            plt.plot(x_coords, y_coords, color=colors[i], label=labels[i], linewidth=2, alpha=0.8)
-        else:
-            plt.plot(x_coords, y_coords, color=colors[i], linewidth=2, alpha=0.8)
+        plt.plot(x_coords, y_coords, color=colors[i], label=labels[i], linewidth=LINEWIDTH, alpha=0.8, linestyle=linestyle[i])
         
         # Mark the start and end points
         plt.scatter(x_coords[0], y_coords[0], color=colors[i], s=100, marker='o', edgecolors='black')
         plt.scatter(x_coords[-1], y_coords[-1], color=colors[i], s=100, marker='s', edgecolors='black')
     
-    plt.title(title, fontsize=20)
-    plt.xlabel(xlabel, fontsize=16)
-    plt.ylabel(ylabel, fontsize=16)
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.grid(True, alpha=0.3)
 
     # Larger tick labels
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+    # plt.xticks(fontsize=14)
+    # plt.yticks(fontsize=14)
 
     if ylim is not None:
         plt.ylim(ylim[0], ylim[1])
     
     if labels:
-        plt.legend(loc='best', fontsize=16)
+        plt.legend(loc='best')
     
     # Equal aspect ratio for proper spatial representation
     # plt.axis('equal')
-    plt.tight_layout()
+    # plt.tight_layout()
+    
+    plt.tight_layout(
+        pad=0,           # Padding between figure edge and edges of subplots
+        w_pad=0,         # Padding between subplots horizontally
+        h_pad=0,         # Padding between subplots vertically
+        rect=[0, 0, 1.25, 1.25]  # Rectangle in normalized figure coordinates)
+    )
     
     # Show the plot
+    plt.savefig("/workspace/data/fig/plot_trajectories_" + filename + ".png", dpi=DPI, bbox_inches='tight')
     plt.show()
 
-def plot_time_series(data, labels=None, title="Yaw Rate Tracking", xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=None):
+def plot_time_series(data, labels=None, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=None, filename=""):
     """
     Plot multiple 2D trajectories on a single graph.
     
@@ -269,7 +307,7 @@ def plot_time_series(data, labels=None, title="Yaw Rate Tracking", xlabel="Time 
     plt.figure(figsize=(10, 8))
     
     # Create a colormap for different trajectories
-    colors = plt.cm.viridis(np.linspace(0, 1, M))
+    colors = plt.cm.Paired(np.linspace(0, 1, M))
     
     for i in range(M):
         trajectory = data[i]
@@ -278,33 +316,164 @@ def plot_time_series(data, labels=None, title="Yaw Rate Tracking", xlabel="Time 
         
         # Plot the trajectory
         if labels:
-            plt.plot(x_coords, y_coords, color=colors[i], label=labels[i], linewidth=2, alpha=0.8)
+            plt.plot(x_coords, y_coords, color=colors[i], label=labels[i], linewidth=LINEWIDTH, alpha=0.8)
         else:
-            plt.plot(x_coords, y_coords, color=colors[i], linewidth=2, alpha=0.8)
+            plt.plot(x_coords, y_coords, color=colors[i], linewidth=LINEWIDTH, alpha=0.8)
         
         # Mark the start and end points
         plt.scatter(x_coords[0], y_coords[0], color=colors[i], s=100, marker='o', edgecolors='black')
         plt.scatter(x_coords[-1], y_coords[-1], color=colors[i], s=100, marker='s', edgecolors='black')
     
-    if title:
-        plt.title(title, fontsize=20)
-    plt.xlabel(xlabel, fontsize=16)
-    plt.ylabel(ylabel, fontsize=16)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.grid(True, alpha=0.3)
 
     # Larger tick labels
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+    # plt.xticks(fontsize=14)
+    # plt.yticks(fontsize=14)
 
     if ylim is not None:
         plt.ylim(ylim[0], ylim[1])
     
     if labels:
-        plt.legend(loc='best', fontsize=16)
+        plt.legend(loc='best', fontsize=LABELS_FONT)
     
     # Equal aspect ratio for proper spatial representation
     # plt.axis('equal')
-    plt.tight_layout()
+    
+    plt.tight_layout(
+        pad=0,           # Padding between figure edge and edges of subplots
+        w_pad=0,         # Padding between subplots horizontally
+        h_pad=0,         # Padding between subplots vertically
+        rect=[0, 0, 1.25, 1.25]  # Rectangle in normalized figure coordinates)
+    )
     
     # Show the plot
-    plt.show()
+    plt.savefig("/workspace/data/fig/plot_time_series_" + filename + ".png", dpi=DPI, bbox_inches='tight')
+    # plt.show()
+    
+    # Show the plot
+    # plt.show()
+
+def plot_time_series_two_axis(data_left, data_right=None, labels_left=None, labels_right=None, 
+                    xlabel="Time [s]", ylabel_left="Yaw Rate [rad/s]", ylabel_right="",
+                    ylim_left=None, ylim_right=None, filename="temp"):
+    """
+    Plot multiple 2D trajectories on a single graph with dual y-axes.
+    
+    Parameters:
+    -----------
+    data_left : numpy array of shape [M_left, T]
+        Array containing M_left trajectories for left y-axis across T time steps
+    data_right : numpy array of shape [M_right, T], optional
+        Array containing M_right trajectories for right y-axis across T time steps
+    labels_left : list of str, optional
+        Labels for left axis trajectories (length M_left)
+    labels_right : list of str, optional
+        Labels for right axis trajectories (length M_right)
+    title : str, optional
+        Plot title
+    xlabel : str, optional
+        X-axis label
+    ylabel : str, optional
+        Y-axis label (applies to left axis, right axis will have same label unless specified differently)
+    ylim_left : tuple or list, optional
+        Y-axis limits for left axis (min, max)
+    ylim_right : tuple or list, optional
+        Y-axis limits for right axis (min, max)
+    """
+    
+    M_left = data_left.shape[0]
+    T = data_left.shape[1]
+    
+    time_axis = np.arange(T) * 0.05  # 20Hz
+    
+    fig, ax1 = plt.subplots(figsize=(10, 8))
+
+    linewidth = 3
+    
+    # Create right y-axis if right data is provided
+    if data_right is not None:
+        ax2 = ax1.twinx()
+        M_right = data_right.shape[0]
+    
+    # Create colormaps for different trajectories
+    colors_left = plt.cm.Paired(np.linspace(0, 1, M_left))
+    if data_right is not None:
+        colors_right = plt.cm.Accent(np.linspace(0, 1, M_right))
+    
+    # Plot left axis trajectories
+    for i in range(M_left):
+        y_coords = data_left[i, :]
+        
+        if labels_left:
+            ax1.plot(time_axis, y_coords, color=colors_left[i], label=labels_left[i], linewidth=linewidth, alpha=0.8)
+        else:
+            ax1.plot(time_axis, y_coords, color=colors_left[i], linewidth=linewidth, alpha=0.8)
+        
+        # Mark the start and end points
+        ax1.scatter(time_axis[0], y_coords[0], color=colors_left[i], s=100, marker='o', edgecolors='black')
+        ax1.scatter(time_axis[-1], y_coords[-1], color=colors_left[i], s=100, marker='s', edgecolors='black')
+    
+    # Plot right axis trajectories if provided
+    if data_right is not None:
+        for i in range(M_right):
+            y_coords = data_right[i, :]
+            
+            if labels_right:
+                ax2.plot(time_axis, y_coords, color=colors_right[i], label=labels_right[i], linewidth=linewidth, alpha=0.8, linestyle='--')
+            else:
+                ax2.plot(time_axis, y_coords, color=colors_right[i], linewidth=linewidth, alpha=0.8, linestyle='--')
+            
+            # Mark the start and end points
+            ax2.scatter(time_axis[0], y_coords[0], color=colors_right[i], s=100, marker='o', edgecolors='black')
+            ax2.scatter(time_axis[-1], y_coords[-1], color=colors_right[i], s=100, marker='s', edgecolors='black')
+    
+    # Set labels and titles
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel_left)
+    
+    if data_right is not None:
+        ax2.set_ylabel(ylabel_right)  # Same label for right axis
+    
+    # Set y-axis limits if provided
+    if ylim_left is not None:
+        ax1.set_ylim(ylim_left[0], ylim_left[1])
+    
+    if data_right is not None and ylim_right is not None:
+        ax2.set_ylim(ylim_right[0], ylim_right[1])
+    
+    # Formatting
+    ax1.grid(True, alpha=0.3)
+    ax1.tick_params(axis='both', which='major')
+    if data_right is not None:
+        ax2.tick_params(axis='y', which='major')
+    
+    # Handle legends
+    handles, labels = [], []
+    
+    # Add left axis legend items
+    if labels_left:
+        lines_left, labels_left_ax = ax1.get_legend_handles_labels()
+        handles.extend(lines_left)
+        labels.extend(labels_left_ax)
+    
+    # Add right axis legend items if available
+    if data_right is not None and labels_right:
+        lines_right, labels_right_ax = ax2.get_legend_handles_labels()
+        handles.extend(lines_right)
+        labels.extend(labels_right_ax)
+    
+    # Create legend if there are any labels
+    if handles:
+        # ax1.legend(handles, labels, loc="center right")
+        ax1.legend(handles, labels, bbox_to_anchor=(0.65, 0.75), borderaxespad=0)
+    
+    plt.tight_layout(
+        pad=0,           # Padding between figure edge and edges of subplots
+        w_pad=0,         # Padding between subplots horizontally
+        h_pad=0,         # Padding between subplots vertically
+        rect=[0, 0, 2.5, 1.1]  # Rectangle in normalized figure coordinates)
+    )
+    plt.savefig("/workspace/data/fig/plot_time_series_two_axis_" + filename + ".png", dpi=DPI, bbox_inches='tight')
+    # plt.show()

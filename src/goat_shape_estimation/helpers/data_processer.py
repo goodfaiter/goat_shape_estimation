@@ -93,10 +93,10 @@ def moving_average_smoothing(vector, window_size=5):
 
 def ema_2d_optimized(vector, alpha=0.3):
     """
-    Efficient EMA implementation for [Timesteps, 3] input
-    Corrected version that handles 3 channels properly
+    Efficient EMA implementation for [Timesteps, Dim] input
     """
     timesteps = vector.shape[0]
+    dim = vector.shape[1]
     device = vector.device
 
     # Create EMA weights [timesteps]
@@ -107,18 +107,18 @@ def ema_2d_optimized(vector, alpha=0.3):
     # Reshape weights for convolution [1, 1, timesteps]
     kernel = weights.view(1, 1, -1)
 
-    # Prepare input: [1, 3, timesteps]
+    # Prepare input: [1, dim, timesteps]
     input_ = vector.t().unsqueeze(0)
 
     # Apply depthwise convolution to handle 3 channels separately
     # We need to expand the kernel to match input channels
-    kernel = kernel.expand(3, 1, -1)  # [3, 1, timesteps]
-    kernel = kernel.reshape(3, 1, -1)  # [3, 1, timesteps]
+    kernel = kernel.expand(dim, 1, -1)  # [dim, 1, timesteps]
+    kernel = kernel.reshape(dim, 1, -1)  # [dim, 1, timesteps]
 
     # Use groups=3 for channel-wise operation
-    smoothed = torch.nn.functional.conv1d(input_, kernel, padding=timesteps - 1, groups=3)[:, :, :timesteps]
+    smoothed = torch.nn.functional.conv1d(input_, kernel, padding=timesteps - 1, groups=dim)[:, :, :timesteps]
 
-    return smoothed.squeeze(0).t()  # [Timesteps, 3]
+    return smoothed.squeeze(0).t()  # [Timesteps, dim]
 
 
 def rotation_matrix_to_angular_velocity(R, dt=1.0):
@@ -191,6 +191,7 @@ class DataProcessorGoat:
         self.input_shape = 21
         self.num_points = 12
         self.output_shape = self.num_points * 3 + 9
+        # self.output_shape = 6
         self.device = device
         # fmt: off
         self.input_mean = torch.tensor(
@@ -335,18 +336,21 @@ class DataProcessorGoat:
         T_world_to_drive = inverse_homogeneous_transform(T_drive_to_world)
 
         # Get transform w to robot
-        T_robot_to_world = create_transform_matrix(robot_pos_in_world, robot_rot_orientation)
-        T_world_to_robot = inverse_homogeneous_transform(T_robot_to_world)
+        # T_robot_to_world = create_transform_matrix(robot_pos_in_world, robot_rot_orientation)
+        # T_world_to_robot = inverse_homogeneous_transform(T_robot_to_world)
 
         # Transform p into robot centric frame
-        p_in_robot = world_to_robot_frame_transform(self.p_in_world, T_world_to_robot)
+        p_in_drive = world_to_robot_frame_transform(self.p_in_world, T_world_to_drive)
 
         sI = 0
-        output_tensor[:, sI : sI + num_points * 3] = p_in_robot.reshape(num_data, num_points * 3)
+        output_tensor[:, sI : sI + num_points * 3] = p_in_drive.reshape(num_data, num_points * 3)
         sI += num_points * 3
 
         ## Downward vector
-        output_tensor[:, sI : sI + 3] = -1.0 * T_world_to_robot[:, :3, 2]  # this is essentially rot_mat * [0 0 -1].T
+        output_tensor[:, sI : sI + 3] = -1.0 * T_world_to_drive[:, :3, 2]  # this is essentially rot_mat * [0 0 -1].T
+        data["/ground_truth/gravity_x"] = output_tensor[:, sI].cpu()
+        data["/ground_truth/gravity_y"] = output_tensor[:, sI + 1].cpu()
+        data["/ground_truth/gravity_z"] = output_tensor[:, sI + 2].cpu()
         sI += 3
 
         ## Base Velocity following robot_vel_in_robot
@@ -355,26 +359,26 @@ class DataProcessorGoat:
         robot_vel_in_robot = ema_2d_optimized(robot_vel_in_robot)
         output_tensor[1:, sI : sI + 3] = robot_vel_in_robot
         output_tensor[0, sI : sI + 3] = output_tensor[1, sI : sI + 3]  # We just fill the first velocity
-        data["/ground_truth/twist_linear_x"] = output_tensor[:, sI]
-        data["/ground_truth/twist_linear_y"] = output_tensor[:, sI + 1]
-        data["/ground_truth/twist_linear_z"] = output_tensor[:, sI + 2]
+        data["/ground_truth/twist_linear_x"] = output_tensor[:, sI].cpu()
+        data["/ground_truth/twist_linear_y"] = output_tensor[:, sI + 1].cpu()
+        data["/ground_truth/twist_linear_z"] = output_tensor[:, sI + 2].cpu()
         sI += 3
 
         ## Angular Velocity following [0 w] = 2 * q_dot X q_inv
         euler_velocity_in_world = angular_velocities_from_quat(drive_quat_drive_to_world[:-1], drive_quat_drive_to_world[1:], 0.05)  # dt = 1/20
-        euler_velocity_in_robot = torch.bmm(T_world_to_drive[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1)).squeeze()
-        euler_velocity_in_robot = ema_2d_optimized(euler_velocity_in_robot)
-        output_tensor[1:, sI : sI + 3] = euler_velocity_in_robot.squeeze()
+        euler_velocity_in_drive = torch.bmm(T_world_to_drive[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1)).squeeze()
+        euler_velocity_in_drive = ema_2d_optimized(euler_velocity_in_drive)
+        output_tensor[1:, sI : sI + 3] = euler_velocity_in_drive.squeeze()
         output_tensor[0, sI : sI + 3] = output_tensor[1, sI : sI + 3]  # We just fill the first velocity
-        data["/ground_truth/twist_angular_x"] = output_tensor[:, sI + 0]
-        data["/ground_truth/twist_angular_y"] = output_tensor[:, sI + 1]
-        data["/ground_truth/twist_angular_z"] = output_tensor[:, sI + 2]
+        data["/ground_truth/twist_angular_x"] = output_tensor[:, sI + 0].cpu()
+        data["/ground_truth/twist_angular_y"] = output_tensor[:, sI + 1].cpu()
+        data["/ground_truth/twist_angular_z"] = output_tensor[:, sI + 2].cpu()
 
         ## Angular velocity following rotation skew matrix method
         # euler_velocity_in_world = rotation_matrix_to_angular_velocity(drive_rotmat_drive_to_world, 0.05)
-        # euler_velocity_in_robot = torch.bmm(T_world_to_drive[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1)).squeeze()
-        # euler_velocity_in_robot = ema_2d_optimized(euler_velocity_in_robot)
-        # output_tensor[1:, sI:sI+3] = euler_velocity_in_robot.squeeze()
+        # euler_velocity_in_drive = torch.bmm(T_world_to_drive[1:, :3, :3], euler_velocity_in_world.unsqueeze(-1)).squeeze()
+        # euler_velocity_in_drive = ema_2d_optimized(euler_velocity_in_drive)
+        # output_tensor[1:, sI:sI+3] = euler_velocity_in_drive.squeeze()
         # output_tensor[0, sI:sI+3] = output_tensor[1, sI:sI+3]  # We just fill the first velocity
         # sI += 3
 
