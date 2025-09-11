@@ -77,9 +77,47 @@ class NoiseOffset(Noise):
         self.offset = offset
 
     def _generate_noise(self, tensor):
-        dist = torch.distributions.Uniform(low=-1.0 * self.offset, high=self.offset)
-        # Note we want different offsets in every dimensions but same over the time series
-        return torch.ones_like(tensor[:, self._index]) * dist.sample([len(self._index)]).to(tensor.device)
+        min_segment_length = 20
+        max_segment_length = 100
+        device = tensor.device
+        T = tensor.shape[0]
+        D = len(self._index)
+
+        # Estimate number of segments needed
+        avg_segment_length = (min_segment_length + max_segment_length) / 2
+        est_segments = int(T / avg_segment_length) + 2
+        
+        # Generate segment lengths
+        segment_lengths = torch.randint(
+            min_segment_length, max_segment_length + 1,
+            (est_segments,), device=device
+        )
+        
+        # Create cumulative lengths and find where we exceed T
+        cum_lengths = torch.cumsum(segment_lengths, dim=0)
+        valid_segments = torch.where(cum_lengths <= T)[0]
+        
+        if len(valid_segments) == 0:
+            # Handle case where first segment is longer than T
+            segment_lengths = torch.tensor([T], device=device)
+            num_segments = 1
+        else:
+            num_segments = len(valid_segments)
+            segment_lengths = segment_lengths[:num_segments]
+            segment_lengths[-1] = T - (0 if num_segments == 1 else cum_lengths[num_segments-2])
+        
+        # Generate offsets for each segment
+        offsets = torch.empty((num_segments, D), device=device).uniform_(-self.offset, self.offset)
+        
+        # Create the final tensor using repeat_interleave
+        noise = torch.repeat_interleave(offsets, segment_lengths[:num_segments], dim=0)
+
+        return noise
+
+
+        # dist = torch.distributions.Uniform(low=-1.0 * self.offset, high=self.offset)
+        # # Note we want different offsets in every dimensions but same over the time series
+        # return torch.ones_like(tensor[:, self._index]) * dist.sample([tensor.shape[0], len(self._index)]).to(tensor.device)
 
 
 class NoiseSinusoidal(Noise):

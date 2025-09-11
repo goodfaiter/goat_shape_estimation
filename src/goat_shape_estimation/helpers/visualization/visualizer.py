@@ -5,11 +5,11 @@ from scipy.interpolate import CubicSpline
 from mpl_toolkits.mplot3d import Axes3D
 
 # matplotlib.use('qtagg')
-LINEWIDTH = 1 # 3 for overleaf
-LABELS_FONT = 14 # 14 stadard, 30 for overleaf
+LINEWIDTH = 3 # 1 standard, 3 for overleaf
+LABELS_FONT = 30 # 14 stadard, 30 for overleaf
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = LABELS_FONT
-DPI = 100 # 100 stanard, 500 for overleaf
+DPI = 500 # 100 stanard, 500 for overleaf
 
 def visualize_3d_spline(points_set, down_vec, text, filename):
     """
@@ -153,14 +153,17 @@ def visualize_3d_spline_minimal(points_set, down_vec):
         z_smooth = cs_z(t_smooth)
         
         # Plot spline curve and points
-        ax.plot(x_smooth, y_smooth, z_smooth, spline_colors[i], linewidth=LINEWIDTH, label='Spline Fit')
-        ax.scatter(x, y, z, c='r', s=50)
+        ax.plot(x_smooth, y_smooth, z_smooth, spline_colors[i], linewidth=LINEWIDTH, label='Spline Represnetation of the Compliant Frame')
+        ax.scatter(x, y, z, c='r', s=100)
     
     # # Plot coordinate vectors
     origin = [0, 0, 0]
     vectors = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], down_vec]) * 0.2
     colors = ['red', 'green', 'blue', 'black']
-    labels = ['X', 'Y', 'Z', 'Gravity']
+    labels = ['Compliance-Centric Frame X Component', 
+              'Compliance-Centric Frame Y Component', 
+              'Compliance-Centric Frame Z Component', 
+              'Gravity Vector in Compliance-Centric Frame']
     
     for vec, color, label in zip(vectors, colors, labels):
         ax.quiver(*origin, *vec, color=color, arrow_length_ratio=0.1, linewidth=LINEWIDTH, label=label + '-axis')
@@ -170,7 +173,7 @@ def visualize_3d_spline_minimal(points_set, down_vec):
     ax.set_yticks([])
     ax.set_zticks([])
     ax.grid(False)
-    ax.legend()
+    # ax.legend()
     plt.axis('equal')
     
     plt.show()
@@ -274,12 +277,12 @@ def plot_trajectories(data, labels, linestyle, title="2D Trajectories", xlabel="
         pad=0,           # Padding between figure edge and edges of subplots
         w_pad=0,         # Padding between subplots horizontally
         h_pad=0,         # Padding between subplots vertically
-        rect=[0, 0, 1.25, 1.25]  # Rectangle in normalized figure coordinates)
+        rect=[0, 0, 1.25, 0.9]  # Rectangle in normalized figure coordinates)
     )
     
     # Show the plot
     plt.savefig("/workspace/data/fig/plot_trajectories_" + filename + ".png", dpi=DPI, bbox_inches='tight')
-    plt.show()
+    # plt.show()
 
 def plot_time_series(data, labels=None, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=None, filename=""):
     """
@@ -345,7 +348,7 @@ def plot_time_series(data, labels=None, xlabel="Time [s]", ylabel="Yaw Rate [rad
         pad=0,           # Padding between figure edge and edges of subplots
         w_pad=0,         # Padding between subplots horizontally
         h_pad=0,         # Padding between subplots vertically
-        rect=[0, 0, 1.25, 1.25]  # Rectangle in normalized figure coordinates)
+        rect=[0, 0, 1.25, 0.65]  # Rectangle in normalized figure coordinates)
     )
     
     # Show the plot

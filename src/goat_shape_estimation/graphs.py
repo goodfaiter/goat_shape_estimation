@@ -16,8 +16,17 @@ INDICES_RING_TWO = [0, 8, 2, 9, 4, 10, 6, 11, 0]
 DEVICE = torch.device("cpu")
 # MODEL_PATH = "/workspace/data/output/2025_08_22_11_19_04/2025_08_22_11_19_04_best_lstm_model.pt"
 # MODEL_PATH = "/workspace/data/output/2025_08_26_15_22_18/2025_08_26_15_22_18_100.pt"
-MODEL_PATH = "/workspace/data/output/2025_08_26_16_08_42/2025_08_26_16_08_42_100.pt" # current best on overleaf
+# MODEL_PATH = "/workspace/data/output/2025_08_26_16_08_42/2025_08_26_16_08_42_100.pt" # current best on overleaf
 # MODEL_PATH = "/workspace/data/output/2025_08_29_11_00_37/2025_08_29_11_00_37_100.pt" # new best
+# MODEL_PATH = "/workspace/data/output/2025_09_04_16_20_46/2025_09_04_16_20_46_best_lstm_model.pt"
+# MODEL_PATH = "/workspace/data/output/2025_09_05_13_37_13/2025_09_05_13_37_13_50.pt"
+# MODEL_PATH = "/workspace/data/output/2025_09_05_13_33_41/2025_09_05_13_33_41_best_lstm_model.pt"
+# MODEL_PATH = "/workspace/data/output/2025_09_09_13_30_47/2025_09_09_13_30_47_30.pt"
+# MODEL_PATH = "/workspace/data/output/2025_09_10_07_05_46/2025_09_10_07_05_46_best_lstm_model.pt" # decent results
+# MODEL_PATH = "/workspace/data/output/2025_09_10_10_36_47/2025_09_10_10_36_47_100.pt"
+# MODEL_PATH = "/workspace/data/output/2025_09_10_12_55_07/2025_09_10_12_55_07_50.pt"
+MODEL_PATH = "/workspace/data/output/2025_09_10_13_08_15/2025_09_10_13_08_15_best_lstm_model.pt" # Final Version
+# MODEL_PATH = "/workspace/data/output/best_lstm_model.pt"
 # MODEL_PATH = "/workspace/data/output/latest_lstm_model.pt"
 
 np.set_printoptions(precision=1)
@@ -135,7 +144,7 @@ def top_down_view(datas):
     plot_trajectories(drive_pos_in_world[:, :min_input, :], title=None, 
                       labels=['Open Loop 1', 'Open Loop 2', 'Open Loop 3', 'Closed Loop 1', 'Closed Loop 2', 'Closed Loop 3'], 
                       linestyle=[None, None, None, "--", "--", "--"],
-                      ylim=[-1.25, 0.5], filename="top_down_view")
+                      ylim=[-1.25, 0.2], filename="top_down_view")
 
 def exponential_moving_average(data, alpha=0.3):
     """
@@ -169,14 +178,14 @@ def exponential_moving_average(data, alpha=0.3):
     
     return smoothed
 
-def yaw_tracking(datas, dur, labels = None, filename = ""):
+def yaw_tracking(datas, dur, labels = None, filename = "", sim = False):
     series = []
     for data, to_plot_dict in datas:
         data_processor = DataProcessorGoat(DEVICE)
         data_processor.process_input_data(data)
         data_processor.process_output_data(data)
-        # Do this or ignore to use rosbag data.
-        # simulate_data_with_model(MODEL_PATH, data)
+        if sim:
+            simulate_data_with_model(MODEL_PATH, data)
         for name, start in to_plot_dict.items():
             if name == '/imu/data/angular_velocity_z':
                 data[name] *= -1.0
@@ -184,27 +193,29 @@ def yaw_tracking(datas, dur, labels = None, filename = ""):
                 series.append(smooth_imu[start:start + dur])
             else:
                 series.append(data[name][start:start + dur])
-    plot_time_series(series, labels=labels, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=[-0.1, 1.5], filename=filename)
+    plot_time_series(series, labels=labels, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=[-0.1, 1.3], filename=filename)
 
 
-def x_tracking(datas, dur, labels):
+def x_tracking(datas, dur, labels, sim = False):
     rates = []
     for data, to_plot_dict in datas:
         data_processor = DataProcessorGoat(DEVICE)
         data_processor.process_input_data(data)
         data_processor.process_output_data(data)
         # Do this or ignore to use rosbag data.
-        # simulate_data_with_model(MODEL_PATH, data)
+        if sim:
+            simulate_data_with_model(MODEL_PATH, data)
         for name, start in to_plot_dict.items():
             rates.append(data[name][start:start + dur])
-    plot_time_series(rates, labels=labels, xlabel="Time [s]", ylabel="Velocity [m/s]", ylim=[-0.1, 0.5], filename="x_velocity_estimation")
+    plot_time_series(rates, labels=labels, xlabel="Time [s]", ylabel="Velocity [m/s]", ylim=[-0.05, 0.45], filename="x_velocity_estimation")
 
-def plot_minimal_shape(data):
+def plot_minimal_shape(data, sim = False):
     data_processor = DataProcessorGoat(DEVICE)
     inputs = data_processor.process_input_data(data)
     targets = data_processor.process_output_data(data)
     # Do this or ignore to use rosbag data.
-    # simulate_data_with_model(MODEL_PATH, data)
+    if sim:
+        simulate_data_with_model(MODEL_PATH, data)
     num_data = inputs.shape[0]
     ground_truth_points = np.zeros([NUM_POINTS, 3])
     estimated_points = np.zeros([NUM_POINTS, 3])
@@ -231,7 +242,7 @@ def plot_minimal_shape(data):
                 estimated_gravity,
             )
 
-def calculate_rmse_reconstruction(data, start=0, end = None):
+def calculate_rmse_reconstruction(data, start=0, end = None, sim = False):
     data_processor = DataProcessorGoat(DEVICE)
     inputs = data_processor.process_input_data(data)
     targets = data_processor.process_output_data(data)
@@ -239,7 +250,8 @@ def calculate_rmse_reconstruction(data, start=0, end = None):
     if not end:
         end = num_data
     # Do this or ignore to use rosbag data.
-    # simulate_data_with_model(MODEL_PATH, data)
+    if sim:
+        simulate_data_with_model(MODEL_PATH, data)
     ground_truth_points = np.zeros([end - start, NUM_POINTS, 3])
     estimated_points = np.zeros([end - start, NUM_POINTS, 3])
     for t in range(start, end):
@@ -256,7 +268,7 @@ def calculate_rmse_reconstruction(data, start=0, end = None):
     rmse = np.sqrt(np.mean((dist)**2))
     return rmse
 
-def calculate_rmse_twist_reconstruction(data, start = 0, end = None):
+def calculate_rmse_twist_reconstruction(data, start = 0, end = None, sim = False):
     data_processor = DataProcessorGoat(DEVICE)
     inputs = data_processor.process_input_data(data)
     targets = data_processor.process_output_data(data)
@@ -264,7 +276,8 @@ def calculate_rmse_twist_reconstruction(data, start = 0, end = None):
     if end is None:
         end = num_data
     # Do this or ignore to use rosbag data.
-    # simulate_data_with_model(MODEL_PATH, data)
+    if sim:
+        simulate_data_with_model(MODEL_PATH, data)
     estimated_twist = np.zeros([end - start, 6])
     ground_truth_twist = np.zeros([end - start, 6])
     estimated_twist[:, 0] = data['/estimated_twist/linear_x'].values[start:end] * 1000
@@ -282,7 +295,7 @@ def calculate_rmse_twist_reconstruction(data, start = 0, end = None):
     return np.sqrt(np.mean((estimated_twist-ground_truth_twist)**2, axis=0))
 
 
-def plot_morphing(data, start, end = None, filename = ""):
+def plot_morphing(data, start, end = None, filename = "", sim = False):
     data_processor = DataProcessorGoat(DEVICE)
     inputs = data_processor.process_input_data(data)
     targets = data_processor.process_output_data(data)
@@ -290,7 +303,8 @@ def plot_morphing(data, start, end = None, filename = ""):
     if end is None:
         end = num_data
     # Do this or ignore to use rosbag data.
-    # simulate_data_with_model(MODEL_PATH, data)
+    if sim:
+        simulate_data_with_model(MODEL_PATH, data)
     ground_truth_points = np.zeros([end - start, NUM_POINTS, 3])
     estimated_points = np.zeros([end - start, NUM_POINTS, 3])
     for t in range(start, end):
@@ -312,14 +326,14 @@ def plot_morphing(data, start, end = None, filename = ""):
     series_right = np.zeros([1, end-start])
     labels_right = []
     series_right[0, :] = rmse * 1000
-    labels_right.append("Reconstruction RMSE (Right)")
+    labels_right.append("Frame Point RMSE (Right)")
 
     plot_time_series_two_axis(data_left=series_left, 
                               data_right=series_right,
                               labels_left=labels_left, 
                               labels_right= labels_right, 
                               xlabel="Time [s]", ylabel_left="Tendon Lengths and Width [m]", ylabel_right="Reconstruction RMSE [mm]",
-                              ylim_left=[0.1, 2.75], ylim_right=[30, 150], filename=filename)
+                              ylim_left=[0.1, 2.75], ylim_right=[15, 140], filename=filename)
 
 
 # Alternative function using dot product (more direct)
@@ -342,7 +356,7 @@ def angle_between_vectors_dot(u, v):
     return angle
 
 
-def calculate_gravity_error(data, start = 0, end = None):
+def calculate_gravity_error(data, start = 0, end = None, sim = False):
     data_processor = DataProcessorGoat(DEVICE)
     inputs = data_processor.process_input_data(data)
     targets = data_processor.process_output_data(data)
@@ -350,7 +364,8 @@ def calculate_gravity_error(data, start = 0, end = None):
     if end is None:
         end = num_data
     # Do this or ignore to use rosbag data.
-    # simulate_data_with_model(MODEL_PATH, data)
+    if sim:
+        simulate_data_with_model(MODEL_PATH, data)
     estimated_gravity = torch.zeros([end - start, 3])
     ground_truth_gravity = torch.zeros([end - start, 3])
     estimated_gravity[:, 0] = torch.tensor(data['/gravity_vector/data_0'].values[start:end])
@@ -364,15 +379,14 @@ def calculate_gravity_error(data, start = 0, end = None):
 
 
 # scenarios
-static_circle = "/workspace/data/2025_08_20/rosbag2_2025_08_20-17_30_24_goat_training.parquet"
-static_rover = "/workspace/data/2025_08_20/rosbag2_2025_08_20-17_35_07_goat_training.parquet"
-static_sphere = "/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet"
-front_w_tendon = "/workspace/data/2025_08_20/rosbag2_2025_08_20-17_39_14_goat_training.parquet"
-front_w_o_tendon = "/workspace/data/2025_08_20/rosbag2_2025_08_20-17_41_31_goat_training.parquet"
-forward_pid = "/workspace/data/2025_08_13/rosbag2_2025_08_13-14_32_37_goat_training.parquet"
-rot_w_frame = "/workspace/data/2025_08_13/rosbag2_2025_08_13-14_22_42_goat_training.parquet"
-rot_w_o_frame = "/workspace/data/2025_08_13/rosbag2_2025_08_13-14_26_13_goat_training.parquet"
-forward_pid_broken_wel = "/workspace/data/2025_08_13/rosbag2_2025_08_13-17_22_15_goat_training.parquet"
+static_circle = ("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_40_29_goat_training.parquet", True)
+static_rover = ("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_42_33_goat_training.parquet", True)
+static_sphere = ("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_44_23_goat_training.parquet", True)
+front_w_tendon = ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_39_14_goat_training.parquet", True)
+front_w_o_tendon = ("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_41_31_goat_training.parquet", True)
+forward_pid = ("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_21_15_goat_training.parquet", True)
+rot_w_frame = ("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet", True)
+forward_pid_broken_wel = ("/workspace/data/2025_08_13/rosbag2_2025_08_13-17_22_15_goat_training.parquet", True)
 
 # Top Down View
 # datas = [
@@ -387,189 +401,198 @@ forward_pid_broken_wel = "/workspace/data/2025_08_13/rosbag2_2025_08_13-17_22_15
 
 # Yaw Rate w/o, w, w + PID Tracking
 # datas = [
-#     (pd.read_parquet(rot_w_frame), {'/desired_twist/angular_z': 1183}), # w/o frame, open
-#     (pd.read_parquet(rot_w_o_frame), {'/ground_truth/twist_angular_z': 394}), # w/o frame, open
-#     (pd.read_parquet(rot_w_frame), {'/ground_truth/twist_angular_z': 254}), # with frame, open
-#     (pd.read_parquet(rot_w_frame), {'/ground_truth/twist_angular_z': 1183}), # with frame, closed
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/desired_twist/angular_z': 1003}), # with frame, open
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_10_07_goat_training.parquet"), {'/ground_truth/twist_angular_z': 568}), # w/o frame, open
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/ground_truth/twist_angular_z': 643}), # with frame, open
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1003}), # with frame, closed
 # ]
-# yaw_tracking(datas, 80, labels=['Desired', 'Open Loop w/o Frame Estimation', 'Open Loop w/ Frame Estimation', 'Closed Loop w/ Frame Estimation'], filename="desired_yaw_tracking")
+# yaw_tracking(datas, 80, labels=['Desired', 'Open Loop w/o Frame Estimation', 'Open Loop w/ Frame Estimation', 'Closed Loop w/ Frame Estimation'], filename="desired_yaw_tracking", sim=True)
 
 # Linear Velocity Estimation
 # datas = [
-#     (pd.read_parquet(forward_pid), {'/desired_twist/linear_x': 70}),
-#     (pd.read_parquet(forward_pid), {'/estimated_twist/linear_x': 69}),
-#     (pd.read_parquet(forward_pid), {'/ground_truth/twist_linear_x': 70}),
+#     (pd.read_parquet(forward_pid), {'/desired_twist/linear_x': 110}),
+#     (pd.read_parquet(forward_pid), {'/estimated_twist/linear_x': 110}),
+#     (pd.read_parquet(forward_pid), {'/ground_truth/twist_linear_x': 110}),
 # ]
-# x_tracking(datas, 60, labels=['Desired', 'Estimated Linear Forward Velocity', 'Ground Truth Linear Forward Velocity'])
+# x_tracking(datas, 80, labels=['Desired', 'Estimated Linear Forward Velocity', 'Ground Truth Linear Forward Velocity'], sim=forward_pid[1])
+
+# Linear Velocity Estimation
+# datas = [
+#     (pd.read_parquet(forward_pid_broken_wel[0]), {'/desired_twist/linear_x': 23}),
+#     (pd.read_parquet(forward_pid_broken_wel[0]), {'/estimated_twist/linear_x': 23}),
+#     (pd.read_parquet(forward_pid_broken_wel[0]), {'/ground_truth/twist_linear_x': 23}),
+# ]
+# x_tracking(datas, 80, labels=['Desired', 'Estimated Linear Forward Velocity', 'Ground Truth Linear Forward Velocity'], sim=forward_pid_broken_wel[1])
 
 # Yaw Rate Estimation
 # datas = [
-#     (pd.read_parquet(rot_w_frame), {'/desired_twist/angular_z': 1183}),
-#     (pd.read_parquet(rot_w_frame), {'/estimated_twist/angular_z': 1183}),
-#     (pd.read_parquet(rot_w_frame), {'/ground_truth/twist_angular_z': 1183}),
-#     (pd.read_parquet(rot_w_frame), {'/imu/data/angular_velocity_z': 1183}),
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/desired_twist/angular_z': 1000}),
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/estimated_twist/angular_z': 1000}),
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1000}),
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/imu/data/angular_velocity_z': 1000}),
 # ]
-# yaw_tracking(datas, 80, labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'Smoothed IMU Yaw Rate'], filename="yaw_rate_estimation")
+# yaw_tracking(datas, 80, labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'Smoothed IMU Yaw Rate'], filename="yaw_rate_estimation", sim=True)
 
 # Plot Shape
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51_goat_training.parquet")  # front fold w/o tendon but was trained on it
-# data = pd.read_parquet(static_circle)  # circle
-# data = pd.read_parquet(static_rover)  # rover
-# data = pd.read_parquet(static_sphere)  # front fold with tendon
-# data = pd.read_parquet(front_w_o_tendon)  # front fold w/o tendon
+# data = pd.read_parquet(static_circle[0])  # circle
+data = pd.read_parquet(static_rover[0])  # rover
+# data = pd.read_parquet(static_sphere[0])  # front fold with tendon
+# data = pd.read_parquet(front_w_o_tendon[0])  # front fold w/o tendon
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_36_03_goat_training.parquet")  # rover to ball, bad data
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet")  # ball to circle, bad data
-# plot_minimal_shape(data)
+# data = pd.read_parquet("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_44_23_goat_training.parquet")  # rover to sphere
+plot_minimal_shape(data, sim=False)
 
-recons = {"(A) Static Circle": np.array([]),
-          "(B) Static Rover" : np.array([]),
-          "(C) Static Sphere": np.array([]),
-          "(D) Static Intermediate w/ Tendon": np.array([]),
-          "(E) Static Intermediate w/o Tendon": np.array([]),
-          "Driving Forwards": np.array([]),
-          "Yawing in Place": np.array([]),
-          "Driving Forwards w/ dist.": np.array([]),}
-data = pd.read_parquet(static_circle) # (A) Static Circle
-rmse = calculate_rmse_reconstruction(start= 50, data=data) * 1000
-recons["(A) Static Circle"] = np.append(recons["(A) Static Circle"], rmse)
+# recons = {"(A) Static Circle": np.array([]),
+#           "(B) Static Rover" : np.array([]),
+#           "(C) Static Sphere": np.array([]),
+#           "(D) Static Intermediate w/ Tendon": np.array([]),
+#           "(E) Static Intermediate w/o Tendon": np.array([]),
+#           "Driving Forwards": np.array([]),
+#           "Yawing in Place": np.array([]),
+#           "Driving Forwards w/ dist.": np.array([]),}
+# data = pd.read_parquet(static_circle[0]) # (A) Static Circle
+# rmse = calculate_rmse_reconstruction(start= 50, data=data, sim=static_circle[1]) * 1000
+# recons["(A) Static Circle"] = np.append(recons["(A) Static Circle"], rmse)
 
-data = pd.read_parquet(static_rover) # (B) Static Rover
-rmse = calculate_rmse_reconstruction(start= 50, data=data) * 1000
-recons["(B) Static Rover"] = np.append(recons["(B) Static Rover"], rmse)
+# data = pd.read_parquet(static_rover[0]) # (B) Static Rover
+# rmse = calculate_rmse_reconstruction(start= 50, data=data, sim=static_rover[1]) * 1000
+# recons["(B) Static Rover"] = np.append(recons["(B) Static Rover"], rmse)
 
-data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet") # static ball
-rmse = calculate_rmse_reconstruction(start= 10, end= 40, data=data) * 1000
-recons["(C) Static Sphere"] = np.append(recons["(C) Static Sphere"], rmse)
+# data = pd.read_parquet(static_sphere[0]) # static ball
+# rmse = calculate_rmse_reconstruction(start=650, end=None, data=data, sim=static_sphere[1]) * 1000
+# recons["(C) Static Sphere"] = np.append(recons["(C) Static Sphere"], rmse)
 
-data = pd.read_parquet(static_sphere) # front fold w/ tendon
-rmse = calculate_rmse_reconstruction(start= 50, data=data) * 1000
-recons["(D) Static Intermediate w/ Tendon"] = np.append(recons["(D) Static Intermediate w/ Tendon"], rmse)
+# data = pd.read_parquet(front_w_tendon[0]) # front fold w/ tendon
+# rmse = calculate_rmse_reconstruction(start= 50, data=data, sim=front_w_tendon[1]) * 1000
+# recons["(D) Static Intermediate w/ Tendon"] = np.append(recons["(D) Static Intermediate w/ Tendon"], rmse)
 
-data = pd.read_parquet(front_w_o_tendon) # front fold w/o tendon
-rmse = calculate_rmse_reconstruction(start= 50, end=400, data=data) * 1000
-recons["(E) Static Intermediate w/o Tendon"] = np.append(recons["(E) Static Intermediate w/o Tendon"], rmse)
+# data = pd.read_parquet(front_w_o_tendon[0]) # front fold w/o tendon
+# rmse = calculate_rmse_reconstruction(start= 50, end=400, data=data, sim=front_w_o_tendon[1]) * 1000
+# recons["(E) Static Intermediate w/o Tendon"] = np.append(recons["(E) Static Intermediate w/o Tendon"], rmse)
 
-data = pd.read_parquet(forward_pid) # forward PID
-rmse = calculate_rmse_reconstruction(start= 50, data=data) * 1000
-recons["Driving Forwards"] = np.append(recons["Driving Forwards"], rmse)
+# data = pd.read_parquet(forward_pid[0]) # forward PID
+# rmse = calculate_rmse_reconstruction(start= 50, data=data, sim=forward_pid[1]) * 1000
+# recons["Driving Forwards"] = np.append(recons["Driving Forwards"], rmse)
 
-data = pd.read_parquet(rot_w_frame) # rot with and without PID with frame
-rmse = calculate_rmse_reconstruction(start= 50, data=data) * 1000
-recons["Yawing in Place"] = np.append(recons["Yawing in Place"], rmse)
+# data = pd.read_parquet(rot_w_frame[0]) # rot with and without PID with frame
+# rmse = calculate_rmse_reconstruction(start= 50, data=data, sim=rot_w_frame[1]) * 1000
+# recons["Yawing in Place"] = np.append(recons["Yawing in Place"], rmse)
 
-data = pd.read_parquet(forward_pid_broken_wel) # forward with yaw PID broken drive
-rmse = calculate_rmse_reconstruction(start= 50, data=data) * 1000
-recons["Driving Forwards w/ dist."] = np.append(recons["Driving Forwards w/ dist."], rmse)
+# data = pd.read_parquet(forward_pid_broken_wel[0]) # forward with yaw PID broken drive
+# rmse = calculate_rmse_reconstruction(start= 50, data=data, sim=forward_pid_broken_wel[1]) * 1000
+# recons["Driving Forwards w/ dist."] = np.append(recons["Driving Forwards w/ dist."], rmse)
 
-# Gravity
-data = pd.read_parquet(static_circle) # (A) Static Circle
-recons["(A) Static Circle"] = np.append(recons["(A) Static Circle"], calculate_gravity_error(data))
-data = pd.read_parquet(static_rover) # (B) Static Rover
-recons["(B) Static Rover"] = np.append(recons["(B) Static Rover"], calculate_gravity_error(data))
-data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet") # static ball
-recons["(C) Static Sphere"] = np.append(recons["(C) Static Sphere"], calculate_gravity_error(data))
-data = pd.read_parquet(static_sphere) # front fold w/ tendon
-recons["(D) Static Intermediate w/ Tendon"] = np.append(recons["(D) Static Intermediate w/ Tendon"], calculate_gravity_error(data))
-data = pd.read_parquet(front_w_o_tendon) # front fold w/o tendon
-recons["(E) Static Intermediate w/o Tendon"] = np.append(recons["(E) Static Intermediate w/o Tendon"], calculate_gravity_error(data))
-data = pd.read_parquet(forward_pid) # forward PID
-recons["Driving Forwards"] = np.append(recons["Driving Forwards"], calculate_gravity_error(data))
-data = pd.read_parquet(rot_w_frame) # rot with and without PID with frame
-recons["Yawing in Place"] = np.append(recons["Yawing in Place"], calculate_gravity_error(data))
-data = pd.read_parquet(forward_pid_broken_wel) # forward with yaw PID broken drive
-recons["Driving Forwards w/ dist."] = np.append(recons["Driving Forwards w/ dist."], calculate_gravity_error(data))
+# # Gravity
+# data = pd.read_parquet(static_circle[0]) # (A) Static Circle
+# recons["(A) Static Circle"] = np.append(recons["(A) Static Circle"], calculate_gravity_error(data, sim=static_circle[1]))
+# data = pd.read_parquet(static_rover[0]) # (B) Static Rover
+# recons["(B) Static Rover"] = np.append(recons["(B) Static Rover"], calculate_gravity_error(data, sim=static_rover[1]))
+# data = pd.read_parquet(static_sphere[0]) # static ball
+# recons["(C) Static Sphere"] = np.append(recons["(C) Static Sphere"], calculate_gravity_error(data, start=650, end=None, sim=static_sphere[1]))
+# data = pd.read_parquet(front_w_tendon[0]) # front fold w/ tendon
+# recons["(D) Static Intermediate w/ Tendon"] = np.append(recons["(D) Static Intermediate w/ Tendon"], calculate_gravity_error(data, sim=front_w_tendon[1]))
+# data = pd.read_parquet(front_w_o_tendon[0]) # front fold w/o tendon
+# recons["(E) Static Intermediate w/o Tendon"] = np.append(recons["(E) Static Intermediate w/o Tendon"], calculate_gravity_error(data, sim=front_w_o_tendon[1]))
+# data = pd.read_parquet(forward_pid[0]) # forward PID
+# recons["Driving Forwards"] = np.append(recons["Driving Forwards"], calculate_gravity_error(data, sim=forward_pid[1]))
+# data = pd.read_parquet(rot_w_frame[0]) # rot with and without PID with frame
+# recons["Yawing in Place"] = np.append(recons["Yawing in Place"], calculate_gravity_error(data, sim=rot_w_frame[1]))
+# data = pd.read_parquet(forward_pid_broken_wel[0]) # forward with yaw PID broken drive
+# recons["Driving Forwards w/ dist."] = np.append(recons["Driving Forwards w/ dist."], calculate_gravity_error(data, sim=forward_pid_broken_wel[1]))
 
-data = pd.read_parquet(static_circle) # (A) Static Circle
-rmse = calculate_rmse_twist_reconstruction(data)
-recons["(A) Static Circle"] = np.append(recons["(A) Static Circle"], rmse)
+# data = pd.read_parquet(static_circle[0]) # (A) Static Circle
+# rmse = calculate_rmse_twist_reconstruction(data, sim=static_circle[1])
+# recons["(A) Static Circle"] = np.append(recons["(A) Static Circle"], rmse)
 
-data = pd.read_parquet(static_rover) # (B) Static Rover
-rmse = calculate_rmse_twist_reconstruction(data)
-recons["(B) Static Rover"] = np.append(recons["(B) Static Rover"], rmse)
+# data = pd.read_parquet(static_rover[0]) # (B) Static Rover
+# rmse = calculate_rmse_twist_reconstruction(data, sim=static_rover[1])
+# recons["(B) Static Rover"] = np.append(recons["(B) Static Rover"], rmse)
 
-data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet") # static ball
-rmse = calculate_rmse_twist_reconstruction(data, start= 10, end= 40)
-recons["(C) Static Sphere"] = np.append(recons["(C) Static Sphere"], rmse)
+# data = pd.read_parquet(static_sphere[0]) # static ball
+# rmse = calculate_rmse_twist_reconstruction(data, start=650, end=None, sim=static_sphere[1])
+# recons["(C) Static Sphere"] = np.append(recons["(C) Static Sphere"], rmse)
 
-data = pd.read_parquet(static_sphere) # front fold w/ tendon
-rmse = calculate_rmse_twist_reconstruction(data)
-recons["(D) Static Intermediate w/ Tendon"] = np.append(recons["(D) Static Intermediate w/ Tendon"], rmse)
+# data = pd.read_parquet(front_w_tendon[0]) # front fold w/ tendon
+# rmse = calculate_rmse_twist_reconstruction(data, sim=front_w_tendon[1])
+# recons["(D) Static Intermediate w/ Tendon"] = np.append(recons["(D) Static Intermediate w/ Tendon"], rmse)
 
-data = pd.read_parquet(front_w_o_tendon) # front fold w/o tendon
-rmse = calculate_rmse_twist_reconstruction(data)
-recons["(E) Static Intermediate w/o Tendon"] = np.append(recons["(E) Static Intermediate w/o Tendon"], rmse)
+# data = pd.read_parquet(front_w_o_tendon[0]) # front fold w/o tendon
+# rmse = calculate_rmse_twist_reconstruction(data, sim=front_w_o_tendon[1])
+# recons["(E) Static Intermediate w/o Tendon"] = np.append(recons["(E) Static Intermediate w/o Tendon"], rmse)
 
-data = pd.read_parquet(forward_pid)  # forward PID
-rmse = calculate_rmse_twist_reconstruction(data)
-recons["Driving Forwards"] = np.append(recons["Driving Forwards"], rmse)
+# data = pd.read_parquet(forward_pid[0])  # forward PID
+# rmse = calculate_rmse_twist_reconstruction(data, sim=forward_pid[1])
+# recons["Driving Forwards"] = np.append(recons["Driving Forwards"], rmse)
 
-data = pd.read_parquet(rot_w_frame)  # rot with and without PID with frame
-rmse = calculate_rmse_twist_reconstruction(data)
-recons["Yawing in Place"] = np.append(recons["Yawing in Place"], rmse)
+# data = pd.read_parquet(rot_w_frame[0])  # rot with and without PID with frame
+# rmse = calculate_rmse_twist_reconstruction(data, sim=rot_w_frame[1])
+# recons["Yawing in Place"] = np.append(recons["Yawing in Place"], rmse)
 
-data = pd.read_parquet(forward_pid_broken_wel) # forward with yaw PID broken drive
-rmse = calculate_rmse_twist_reconstruction(data)
-recons["Driving Forwards w/ dist."] = np.append(recons["Driving Forwards w/ dist."], rmse)
+# data = pd.read_parquet(forward_pid_broken_wel[0]) # forward with yaw PID broken drive
+# rmse = calculate_rmse_twist_reconstruction(data, sim=forward_pid_broken_wel[1])
+# recons["Driving Forwards w/ dist."] = np.append(recons["Driving Forwards w/ dist."], rmse)
 
-recons_mat = []
-for key, value in recons.items():
-    recons_mat.append(value)
-    line = ""
-    line += key
-    i = 0
-    for v in value:
-        line += " & "
-        line += f"{v:.3}"
-        if i == 4:
-            line += " & "
-            line += f"{value[2:5].mean():.3}"
-        if i == 7:
-            line += " & "
-            line += f"{value[5:8].mean():.3}"
-        i += 1
-    line += " "
-    line += chr(92)
-    line += chr(92)
-    print(line)
+# recons_mat = []
+# for key, value in recons.items():
+#     recons_mat.append(value)
+#     line = ""
+#     line += key
+#     i = 0
+#     for v in value:
+#         line += " & "
+#         line += f"{v:.3}"
+#         if i == 4:
+#             line += " & "
+#             line += f"{value[2:5].mean():.3}"
+#         if i == 7:
+#             line += " & "
+#             line += f"{value[5:8].mean():.3}"
+#         i += 1
+#     line += " "
+#     line += chr(92)
+#     line += chr(92)
+#     print(line)
 
-recons_mat = np.array(recons_mat)
+# recons_mat = np.array(recons_mat)
 
-print(chr(92) + "midrule")
+# print(chr(92) + "midrule")
 
-line = chr(92) + "textbf{Mean}"
-for i in range(recons_mat.shape[1]):
-    line += " & "
-    line += f"{recons_mat[:, i].mean():.3}"
-    if i == 4:
-        line += " & "
-    if i == 7:
-        line += " & "
-line += " "
-line += chr(92)
-line += chr(92)
-print(line)
+# line = chr(92) + "textbf{Mean}"
+# for i in range(recons_mat.shape[1]):
+#     line += " & "
+#     line += f"{recons_mat[:, i].mean():.3}"
+#     if i == 4:
+#         line += " & "
+#     if i == 7:
+#         line += " & "
+# line += " "
+# line += chr(92)
+# line += chr(92)
+# print(line)
 
-line = chr(92) + "textbf{Std Dev.}"
-for i in range(recons_mat.shape[1]):
-    line += " & "
-    line += f"{recons_mat[:, i].std():.3}"
-    if i == 4:
-        line += " & "
-    if i == 7:
-        line += " & "
-line += " "
-line += chr(92)
-line += chr(92)
-print(line)
+# line = chr(92) + "textbf{Std Dev.}"
+# for i in range(recons_mat.shape[1]):
+#     line += " & "
+#     line += f"{recons_mat[:, i].std():.3}"
+#     if i == 4:
+#         line += " & "
+#     if i == 7:
+#         line += " & "
+# line += " "
+# line += chr(92)
+# line += chr(92)
+# print(line)
 
-# data = pd.read_parquet(static_circle)  # circle
+# data = pd.read_parquet(static_circle[0])  # circle
 # plot_morphing(data, 50)
-# data = pd.read_parquet(static_rover)  # rover
+# data = pd.read_parquet(static_rover[0])  # rover
 # plot_morphing(data, 50)
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_36_03_goat_training.parquet") # rover to ball, shitty mocap
 # plot_morphing(data, 50, 650)
-data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet") # ball to circle, shitty mocap
-plot_morphing(data, 20, filename="morphing_timeseries_sphere_to_circle")
-# data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_12_23_goat_training.parquet") # circle to ball to circle
-# plot_morphing(data, 0, filename="morphing_timeseries_sphere_to_circle")
+# data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet") # ball to circle, shitty mocap
+# plot_morphing(data, 20, filename="morphing_timeseries_sphere_to_circle", sim=True)
+# data = pd.read_parquet("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_44_23_goat_training.parquet") # rover to sphere
+# plot_morphing(data, 10, filename="morphing_timeseries_sphere_to_circle", sim=True)
 

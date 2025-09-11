@@ -196,32 +196,49 @@ class DataProcessorGoat:
         # fmt: off
         self.input_mean = torch.tensor(
             [
-                0, 0, 0, # gravity vector
-                0, 0, 0, # angular velocity
-                0, 0, -10,  # linear acceleration
-                0, 0, 0, 0, # drive velocity [rev/s]
-                0, 0, # commanded velocity [rev/s]
-                0, 0, 0, 0, # drive current [A]
-                2.5, 2.5, # tendon length [m]
+                4.1679e-02,  5.5864e-02, -9.6136e-01,  1.5716e-03,  2.2624e-04,
+                2.6797e-03,  1.3066e+00,  2.9930e-01, -9.3620e+00,  7.2530e-01,
+                5.6580e-01,  6.6177e-01,  6.9453e-01,  6.4724e-01,  7.0816e-01,
+                1.7975e-02, -1.6179e-02,  1.0438e-03,  1.4893e-02,  2.1843e+00,
+                1.9248e+00
+                # 0, 0, 0, # gravity vector
+                # 0, 0, 0, # angular velocity
+                # 0, 0, -10,  # linear acceleration
+                # 0, 0, 0, 0, # drive velocity [rev/s]
+                # 0, 0, # commanded velocity [rev/s]
+                # 0, 0, 0, 0, # drive current [A]
+                # 2.1, 1.9, # tendon length [m]
             ],
             dtype=torch.float,
             device=self.device,
         )
         self.input_std = torch.tensor(
             [
-                1, 1, 1, # gavity vector
-                3, 3, 3, # angular velocity
-                7, 7, 7,  # linear acceleration
-                35, 35, 35, 35, # drive velocity [rev/s]
-                35, 35, # commanded velocity [rev/s]
-                0.5, 0.5, 0.5, 0.5, # drive current [A]
-                1.0, 1.0, # tendon length [m]
+                0.1723,  0.1900,  0.0716,  0.4560,  0.2989,  0.4183,  1.6915,  2.0302,
+                1.1752, 10.9976, 10.8289, 11.0510, 11.0283, 11.6434, 11.5539,  0.1492,
+                0.0987,  0.1087,  0.0999,  0.4068,  0.5236
+                # 1, 1, 1, # gavity vector
+                # 3, 3, 3, # angular velocity
+                # 7, 7, 7,  # linear acceleration
+                # 35, 35, 35, 35, # drive velocity [rev/s]
+                # 35, 35, # commanded velocity [rev/s]
+                # 0.5, 0.5, 0.5, 0.5, # drive current [A]
+                # 0.5, 0.5, # tendon length [m]
             ],
             dtype=torch.float,
             device=self.device,
         )
 
         self.output_mean = torch.tensor(
+            # [-5.0184e-01, -1.1141e-02, -6.3517e-02, -3.5605e-01,  2.9690e-01,
+            # 8.4124e-02, -9.8879e-03,  3.6781e-01,  5.8565e-02,  3.2981e-01,
+            # 3.3143e-01, -8.9330e-02,  5.0289e-01, -8.5933e-03, -5.4675e-02,
+            # 3.5278e-01, -2.9333e-01,  8.4656e-02,  1.2284e-02, -3.7362e-01,
+            # 5.3609e-02, -3.3182e-01, -3.2859e-01, -8.2803e-02, -3.4313e-01,
+            # 3.2907e-01, -7.9023e-02,  3.4189e-01,  3.0155e-01,  8.4230e-02,
+            # 3.5800e-01, -3.3964e-01, -7.9556e-02, -3.5148e-01, -2.9738e-01,
+            # 7.7703e-02, -9.8626e-03, -4.8626e-02, -9.8765e-01,  1.2406e-02,
+            # -1.8853e-03,  4.5675e-05, -2.6277e-04, -2.3121e-04, -2.8533e-03],
             [0 for _ in range(self.num_points * 3)] + # Frame points [m]
             [
                 0, 0, 0, # Down vector
@@ -232,11 +249,16 @@ class DataProcessorGoat:
             device=self.device,
         )
         self.output_std = torch.tensor(
-            [0.5 for _ in range(self.num_points * 3)] + # Frame points [m]
+            # [0.1317, 0.0188, 0.0833, 0.0349, 0.0666, 0.0192, 0.0235, 0.1353, 0.0761,
+            # 0.0728, 0.0465, 0.0181, 0.1324, 0.0165, 0.0828, 0.0357, 0.0624, 0.0253,
+            # 0.0239, 0.1324, 0.0754, 0.0653, 0.0448, 0.0269, 0.0554, 0.0466, 0.0226,
+            # 0.0371, 0.0574, 0.0214, 0.0538, 0.0438, 0.0275, 0.0365, 0.0671, 0.0285,
+            # 0.0219, 0.1367, 0.0542, 0.1346, 0.0213, 0.0079, 0.0358, 0.0203, 0.2924],
+            [0.2 for _ in range(self.num_points * 3)] + # Frame points [m]
             [
                 1, 1, 1, # Down vector
-                0.3, 0.3, 0.3, # Base Linear Velocity [m/s]
-                1, 1, 1, # Base Angular Velocity [rad/s]
+                0.1, 0.3, 0.3, # Base Linear Velocity [m/s]
+                0.5, 0.5, 0.1, # Base Angular Velocity [rad/s]
             ],
             dtype=torch.float,
             device=self.device,
@@ -284,21 +306,21 @@ class DataProcessorGoat:
         return (data_tensor - self.input_mean) / self.input_std
 
     def process_output_data(self, data) -> torch.Tensor:
-        num_data = data["TEST_GOAT_Rotation_X"].size
+        num_data = data["MarkerSet 001:Marker1_Position_X"].size
         output_tensor = torch.zeros([num_data, self.output_shape], dtype=torch.float, device=self.device)
 
         ## Frame points
         num_points = 12
         self.p_in_world = torch.zeros([num_data, num_points, 3], dtype=torch.float, device=self.device)
-        robot_pos_in_world = torch.zeros([num_data, 3], dtype=torch.float, device=self.device)
-        robot_rot_orientation = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
-        robot_pos_in_world[:, 0] = torch.tensor(data["TEST_GOAT_Position_X"].values) * 1.0e-3
-        robot_pos_in_world[:, 1] = torch.tensor(data["TEST_GOAT_Position_Y"].values) * 1.0e-3
-        robot_pos_in_world[:, 2] = torch.tensor(data["TEST_GOAT_Position_Z"].values) * 1.0e-3
-        robot_rot_orientation[:, 0] = torch.tensor(data["TEST_GOAT_Rotation_X"].values)
-        robot_rot_orientation[:, 1] = torch.tensor(data["TEST_GOAT_Rotation_Y"].values)
-        robot_rot_orientation[:, 2] = torch.tensor(data["TEST_GOAT_Rotation_Z"].values)
-        robot_rot_orientation[:, 3] = torch.tensor(data["TEST_GOAT_Rotation_W"].values)
+        # robot_pos_in_world = torch.zeros([num_data, 3], dtype=torch.float, device=self.device)
+        # robot_rot_orientation = torch.zeros([num_data, 4], dtype=torch.float, device=self.device)
+        # robot_pos_in_world[:, 0] = torch.tensor(data["TEST_GOAT_Position_X"].values) * 1.0e-3
+        # robot_pos_in_world[:, 1] = torch.tensor(data["TEST_GOAT_Position_Y"].values) * 1.0e-3
+        # robot_pos_in_world[:, 2] = torch.tensor(data["TEST_GOAT_Position_Z"].values) * 1.0e-3
+        # robot_rot_orientation[:, 0] = torch.tensor(data["TEST_GOAT_Rotation_X"].values)
+        # robot_rot_orientation[:, 1] = torch.tensor(data["TEST_GOAT_Rotation_Y"].values)
+        # robot_rot_orientation[:, 2] = torch.tensor(data["TEST_GOAT_Rotation_Z"].values)
+        # robot_rot_orientation[:, 3] = torch.tensor(data["TEST_GOAT_Rotation_W"].values)
         for j in range(0, num_points):
             self.p_in_world[:, j, 0] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_X"].values) * 1.0e-3
             self.p_in_world[:, j, 1] = torch.tensor(data["MarkerSet 001:Marker" + str(j + 1) + "_Position_Y"].values) * 1.0e-3

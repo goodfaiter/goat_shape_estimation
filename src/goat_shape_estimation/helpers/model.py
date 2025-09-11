@@ -104,8 +104,9 @@ class SelfAttentionRNNModel(nn.Module):
 class BeliefEncoderRNNModel(nn.Module):
     """Attention-based Model with PyTorch"""
 
-    def __init__(self, input_size, latent_size, hidden_size, num_layers, output_size, device):
+    def __init__(self, input_size, latent_size, hidden_size, num_layers, output_size, device, noisy_index):
         super().__init__()
+        self.noisy_index = noisy_index
         self.hidden_size = hidden_size
         self.latent_size = latent_size
         self.num_layers = num_layers
@@ -115,8 +116,9 @@ class BeliefEncoderRNNModel(nn.Module):
         self.rnn = nn.RNN(self.latent_size, hidden_size, num_layers, batch_first=True, device=device)
 
         # A simple feedforward layer
-        self.ga = nn.Linear(hidden_size, self.latent_size, device=device)
-        self.gb = nn.Linear(hidden_size, self.latent_size, device=device)
+        self.h_to_t = nn.Linear(hidden_size, len(self.noisy_index), device=device)
+        self.t_to_l = nn.Linear(len(self.noisy_index), self.latent_size, device=device)
+        self.h_to_l = nn.Linear(hidden_size, self.latent_size, device=device)
         self.fc_decoder = nn.Linear(self.latent_size, output_size, device=device)
 
     def forward(self, x, h0: Optional[torch.Tensor] = None):
@@ -128,11 +130,12 @@ class BeliefEncoderRNNModel(nn.Module):
 
         latent_b, h0 = self.rnn(x, h0)
 
-        a = self.ga(latent_b)
+        a = self.h_to_t(latent_b)
         a = torch.nn.functional.tanh(a)
-        a = x * a # elementwise multiplication
+        a = x[:, :, self.noisy_index] * a # elementwise multiplication
+        a = self.t_to_l(a)
 
-        b = self.gb(latent_b)
+        b = self.h_to_l(latent_b)
         
         out = torch.nn.functional.tanh(a + b)
         out = self.fc_decoder(out)
@@ -179,7 +182,7 @@ def train_model(
     val_losses = []
 
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     for epoch in range(epochs):
         model.train()
@@ -188,7 +191,9 @@ def train_model(
         for inputs, targets in tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}"):
             optimizer.zero_grad()
             outputs, _ = model(inputs)
-            loss = criterion(outputs, targets)
+            # loss = criterion(outputs, targets)
+            loss = torch.pow(outputs - targets, 2) / (2.0 + targets.abs())
+            loss = loss.mean()
             loss.backward()
             optimizer.step()
 
@@ -219,8 +224,22 @@ def train_model(
             wrapper = ScaledModelWrapper(model, input_mean, input_std, output_mean, output_std)
             wrapper.to('cpu')
             wrapper.freeze()
+            path = file_prefix + "best_lstm_model.pt"
             wrapper.trace_and_save(file_prefix + "best_lstm_model.pt")
+            wrapper.trace_and_save("data/output/best_lstm_model.pt")
+            print(f"Saving best polcies to /workspace/{path}")
+            wrapper.unfreeze()
+            wrapper.to(device)
+
+        if epoch % 10 == 0:
+            best_val_loss = min(best_val_loss, val_loss)
+            wrapper = ScaledModelWrapper(model, input_mean, input_std, output_mean, output_std)
+            wrapper.to('cpu')
+            wrapper.freeze()
+            path = file_prefix + f"{epoch}.pt"
+            wrapper.trace_and_save(path)
             wrapper.trace_and_save("data/output/latest_lstm_model.pt")
+            print(f"Saving latest polcies to /workspace/{path}")
             wrapper.unfreeze()
             wrapper.to(device)
 
