@@ -1,9 +1,37 @@
 version: '3.8'
 
 services:
-  dev:
-    build: .
-    container_name: goat-shape-estimation
+  dev_cpu:
+    build: DockerfileCpu
+    container_name: goat_shape_estimation_cpu
     volumes:
       - ./:/workspace
+    command: tail -f /dev/null
+  dev_gpu:
+    build: DockerfileGpu
+    container_name: goat_shape_estimation_gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XDG_RUNTIME_DIR=/tmp
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - WAYLAND_DISPLAY=$WAYLAND_DISPLAY
+    group_add:
+      - "video"
+    privileged: True
+    runtime: nvidia
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ${HOME}/.Xauthority:/root/.Xauthority
+      - ./:/workspace
+      - $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY
     command: tail -f /dev/null
