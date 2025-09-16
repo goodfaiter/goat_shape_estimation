@@ -66,6 +66,9 @@ def main():
         "/workspace/data/2025_09_03/rosbag2_2025_09_03-16_12_23", # circle to sphere to circle, poor data cause tendons are offset
         "/workspace/data/2025_09_04/rosbag2_2025_09_04-17_41_33", # circle to rover
         "/workspace/data/2025_09_04/rosbag2_2025_09_04-17_45_31", # sphere to circle
+        "/workspace/data/2025_09_15/rosbag2_2025_09_15-12_33_43", # upside down circle
+        "/workspace/data/2025_09_15/rosbag2_2025_09_15-12_35_40", # upside down circle -> sphere -> circle
+        "/workspace/data/2025_09_15/rosbag2_2025_09_15-12_38_29", # upside down rover
     ]
     test_paths = [
         # "/workspace/data/2025_08_13/rosbag2_2025_08_13-17_22_15", # forward with PID broken wheel

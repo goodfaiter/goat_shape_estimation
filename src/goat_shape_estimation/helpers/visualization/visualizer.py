@@ -348,7 +348,7 @@ def plot_time_series(data, labels=None, xlabel="Time [s]", ylabel="Yaw Rate [rad
         pad=0,           # Padding between figure edge and edges of subplots
         w_pad=0,         # Padding between subplots horizontally
         h_pad=0,         # Padding between subplots vertically
-        rect=[0, 0, 1.25, 0.65]  # Rectangle in normalized figure coordinates)
+        rect=[0, 0, 1.25, 0.75]  # Rectangle in normalized figure coordinates)
     )
     
     # Show the plot

@@ -46,7 +46,7 @@ traced_model = torch.jit.load("/workspace/data/output/best_lstm_model.pt", map_l
 
 # data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-14_32_04_goat_training.parquet") # circle
 # data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-14_37_20_goat_training.parquet") # rover
-data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet") # yaw w/ width, w/o and w/ PID
+# data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet") # yaw w/ width, w/o and w/ PID
 # data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_10_07_goat_training.parquet") # yaw w/o width (0.5), w/o and w/ PID
 # data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_12_23_goat_training.parquet") # circle to sphere to circle, poor data cause tendons are offset
 # data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_21_15_goat_training.parquet") # forward w/ width, w/ PID
@@ -56,6 +56,8 @@ data = pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_g
 # data = pd.read_parquet("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_42_33_goat_training.parquet") # rover
 # data = pd.read_parquet("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_44_23_goat_training.parquet") # rover to sphere
 # data = pd.read_parquet("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_45_31_goat_training.parquet") # sphere to circle
+
+data = pd.read_parquet("/workspace/data/2025_09_15/rosbag2_2025_09_15-12_38_29_goat_training.parquet") # upside down rover
 
 device = device = torch.device("cpu")
 
@@ -89,12 +91,12 @@ for i in range(num_data):
         estimated_points_to_visualize[0, :, :] = estimated_points[[0, 1, 2, 3, 4, 5, 6, 7, 0], :]
         estimated_points_to_visualize[1, :, :] = estimated_points[[0, 8, 2, 9, 4, 10, 6, 11, 0], :]
 
-        # visualize_3d_spline(
-        #     estimated_points_to_visualize.detach().numpy(),
-        #     estimated_gravity.detach().numpy(),
-        #     text=f" with Tendon length {inputs[i, -2]:.2f}[m] and {inputs[i, -1]:.2f}[m], timestep {i*0.05:.2f}[s]",
-        #     filename="data/output/" + f"spline_{i}",
-        # )
+        visualize_3d_spline(
+            estimated_points_to_visualize.detach().numpy(),
+            estimated_gravity.detach().numpy(),
+            text=f" with Tendon length {inputs[i, -2]:.2f}[m] and {inputs[i, -1]:.2f}[m], timestep {i*0.05:.2f}[s]",
+            filename="data/output/" + f"spline_{i}",
+        )
 
     estimated_velocities[i, :] = output[vel_index:]
 

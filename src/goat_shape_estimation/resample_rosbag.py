@@ -215,6 +215,13 @@ bags_and_offsets = [
     # ("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_42_33", 17),
     # ("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_44_23", 17),
     # ("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_45_31", 17),
+
+    # ("/workspace/data/2025_09_15/rosbag2_2025_09_15-12_33_43", 13), # upside down circle
+    # ("/workspace/data/2025_09_15/rosbag2_2025_09_15-12_35_40", 13), # upside down circle -> sphere -> circle
+    # ("/workspace/data/2025_09_15/rosbag2_2025_09_15-12_38_29", 13), # upside down rover
+
+    ("/workspace/data/2025_09_15/rosbag2_2025_09_15-15_29_42", 0), # down the hill, dummy mocap
+
 ]
 
 for bag, offset in bags_and_offsets:

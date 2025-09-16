@@ -25,11 +25,9 @@ DEVICE = torch.device("cpu")
 # MODEL_PATH = "/workspace/data/output/2025_09_10_07_05_46/2025_09_10_07_05_46_best_lstm_model.pt" # decent results
 # MODEL_PATH = "/workspace/data/output/2025_09_10_10_36_47/2025_09_10_10_36_47_100.pt"
 # MODEL_PATH = "/workspace/data/output/2025_09_10_12_55_07/2025_09_10_12_55_07_50.pt"
-MODEL_PATH = "/workspace/data/output/2025_09_10_13_08_15/2025_09_10_13_08_15_best_lstm_model.pt" # Final Version
+MODEL_PATH = "/workspace/data/output/2025_09_10_13_08_15/2025_09_10_13_08_15_best_lstm_model.pt" # Final Version, used for paper
 # MODEL_PATH = "/workspace/data/output/best_lstm_model.pt"
 # MODEL_PATH = "/workspace/data/output/latest_lstm_model.pt"
-
-np.set_printoptions(precision=1)
 
 def simulate_data_with_model(model_path, data):
     device = device = torch.device("cpu")
@@ -193,7 +191,8 @@ def yaw_tracking(datas, dur, labels = None, filename = "", sim = False):
                 series.append(smooth_imu[start:start + dur])
             else:
                 series.append(data[name][start:start + dur])
-    plot_time_series(series, labels=labels, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=[-0.1, 1.3], filename=filename)
+            print(name, np.mean(data[name][start:start + dur]))
+    plot_time_series(series, labels=labels, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=[-0.1, 1.2], filename=filename)
 
 
 def x_tracking(datas, dur, labels, sim = False):
@@ -334,6 +333,23 @@ def plot_morphing(data, start, end = None, filename = "", sim = False):
                               labels_right= labels_right, 
                               xlabel="Time [s]", ylabel_left="Tendon Lengths and Width [m]", ylabel_right="Reconstruction RMSE [mm]",
                               ylim_left=[0.1, 2.75], ylim_right=[15, 140], filename=filename)
+    
+def plot_gravity(data, start, end = None):
+    data_processor = DataProcessorGoat(DEVICE)
+    inputs = data_processor.process_input_data(data)
+    targets = data_processor.process_output_data(data)
+    num_data = inputs.shape[0]
+
+    if end is None:
+        end = num_data
+
+    series = []
+    series.append(data["/gravity_vector/data_0"][start:end])
+    series.append(data["/gravity_vector/data_1"][start:end])
+    series.append(data["/gravity_vector/data_2"][start:end])
+    plot_time_series(series, labels=["Estimated Gravity Vector X",
+                                     "Estimated Gravity Vector Y",
+                                     "Estimated Gravity Vector Z"], xlabel="Time [s]", ylabel="Unit Vector []", ylim=[-1.1, 1.1], filename="gravity")
 
 
 # Alternative function using dot product (more direct)
@@ -428,21 +444,21 @@ forward_pid_broken_wel = ("/workspace/data/2025_08_13/rosbag2_2025_08_13-17_22_1
 # datas = [
 #     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/desired_twist/angular_z': 1000}),
 #     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/estimated_twist/angular_z': 1000}),
-#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1000}),
 #     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/imu/data/angular_velocity_z': 1000}),
+#     (pd.read_parquet("/workspace/data/2025_09_03/rosbag2_2025_09_03-16_06_38_goat_training.parquet"), {'/ground_truth/twist_angular_z': 1000}),
 # ]
-# yaw_tracking(datas, 80, labels=['Desired', 'Estimated Yaw Rate', 'Ground Truth Yaw Rate', 'Smoothed IMU Yaw Rate'], filename="yaw_rate_estimation", sim=True)
+# yaw_tracking(datas, 80, labels=['Desired', 'Estimated Yaw Rate', 'Smoothed IMU Yaw Rate', 'Ground Truth Yaw Rate'], filename="yaw_rate_estimation", sim=True)
 
 # Plot Shape
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-15_09_51_goat_training.parquet")  # front fold w/o tendon but was trained on it
 # data = pd.read_parquet(static_circle[0])  # circle
-data = pd.read_parquet(static_rover[0])  # rover
+# data = pd.read_parquet(static_rover[0])  # rover
 # data = pd.read_parquet(static_sphere[0])  # front fold with tendon
 # data = pd.read_parquet(front_w_o_tendon[0])  # front fold w/o tendon
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_36_03_goat_training.parquet")  # rover to ball, bad data
 # data = pd.read_parquet("/workspace/data/2025_08_20/rosbag2_2025_08_20-17_37_32_goat_training.parquet")  # ball to circle, bad data
 # data = pd.read_parquet("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_44_23_goat_training.parquet")  # rover to sphere
-plot_minimal_shape(data, sim=False)
+# plot_minimal_shape(data, sim=False)
 
 # recons = {"(A) Static Circle": np.array([]),
 #           "(B) Static Rover" : np.array([]),
@@ -534,6 +550,8 @@ plot_minimal_shape(data, sim=False)
 # rmse = calculate_rmse_twist_reconstruction(data, sim=forward_pid_broken_wel[1])
 # recons["Driving Forwards w/ dist."] = np.append(recons["Driving Forwards w/ dist."], rmse)
 
+# np.set_printoptions(precision=1)
+
 # recons_mat = []
 # for key, value in recons.items():
 #     recons_mat.append(value)
@@ -542,13 +560,20 @@ plot_minimal_shape(data, sim=False)
 #     i = 0
 #     for v in value:
 #         line += " & "
-#         line += f"{v:.3}"
+#         if i == 0:
+#             line += f"{v:.0f}"
+#         elif i == 1:
+#             line += f"{v:.1f}"
+#         elif i > 1 and i <= 4:
+#             line += f"{v:.0f}"
 #         if i == 4:
 #             line += " & "
-#             line += f"{value[2:5].mean():.3}"
+#             line += f"{value[2:5].mean():.0f}"
+#         if i > 4 and i <= 7:
+#             line += f"{v:.1f}"
 #         if i == 7:
 #             line += " & "
-#             line += f"{value[5:8].mean():.3}"
+#             line += f"{value[5:8].mean():.1f}"
 #         i += 1
 #     line += " "
 #     line += chr(92)
@@ -562,9 +587,17 @@ plot_minimal_shape(data, sim=False)
 # line = chr(92) + "textbf{Mean}"
 # for i in range(recons_mat.shape[1]):
 #     line += " & "
-#     line += f"{recons_mat[:, i].mean():.3}"
+#     # line += f"{recons_mat[:, i].mean():.3}"
+#     if i == 0:
+#         line += f"{recons_mat[:, i].mean():.0f}"
+#     elif i == 1:
+#         line += f"{recons_mat[:, i].mean():.1f}"
+#     elif i > 1 and i <= 4:
+#         line += f"{recons_mat[:, i].mean():.0f}"
 #     if i == 4:
 #         line += " & "
+#     if i > 4 and i <= 7:
+#         line += f"{recons_mat[:, i].mean():.1f}"
 #     if i == 7:
 #         line += " & "
 # line += " "
@@ -575,9 +608,17 @@ plot_minimal_shape(data, sim=False)
 # line = chr(92) + "textbf{Std Dev.}"
 # for i in range(recons_mat.shape[1]):
 #     line += " & "
-#     line += f"{recons_mat[:, i].std():.3}"
+#     # line += f"{recons_mat[:, i].std():.3}"
+#     if i == 0:
+#         line += f"{recons_mat[:, i].std():.0f}"
+#     elif i == 1:
+#         line += f"{recons_mat[:, i].std():.1f}"
+#     elif i > 1 and i <= 4:
+#         line += f"{recons_mat[:, i].std():.0f}"
 #     if i == 4:
 #         line += " & "
+#     if i > 4 and i <= 7:
+#         line += f"{recons_mat[:, i].std():.1f}"
 #     if i == 7:
 #         line += " & "
 # line += " "
@@ -596,3 +637,5 @@ plot_minimal_shape(data, sim=False)
 # data = pd.read_parquet("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_44_23_goat_training.parquet") # rover to sphere
 # plot_morphing(data, 10, filename="morphing_timeseries_sphere_to_circle", sim=True)
 
+data = pd.read_parquet("/workspace/data/2025_09_15/rosbag2_2025_09_15-15_29_42_goat_training.parquet") # downhill fake mocap
+plot_gravity(data, start = int(28.9*20), end = int(36.1 * 20))
