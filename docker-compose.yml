@@ -2,13 +2,15 @@ version: '3.8'
 
 services:
   dev_cpu:
-    build: DockerfileCpu
+    build: 
+      dockerfile: ./DockerfileCpu
     container_name: goat_shape_estimation_cpu
     volumes:
       - ./:/workspace
     command: tail -f /dev/null
   dev_gpu:
-    build: DockerfileGpu
+    build:
+      dockerfile: ./DockerfileGpu
     container_name: goat_shape_estimation_gpu
     deploy:
       resources:
