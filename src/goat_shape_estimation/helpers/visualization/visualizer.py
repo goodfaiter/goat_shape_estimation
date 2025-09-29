@@ -1,13 +1,14 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from mpl_toolkits.mplot3d import Axes3D
 
 # matplotlib.use('qtagg')
 LINEWIDTH = 3 # 1 standard, 3 for overleaf
 LABELS_FONT = 30 # 14 stadard, 30 for overleaf
-plt.rcParams['font.family'] = 'Times New Roman'
+# plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['font.size'] = LABELS_FONT
 DPI = 500 # 100 stanard, 500 for overleaf
 
@@ -353,7 +354,7 @@ def plot_time_series(data, labels=None, xlabel="Time [s]", ylabel="Yaw Rate [rad
     
     # Show the plot
     plt.savefig("/workspace/data/fig/plot_time_series_" + filename + ".png", dpi=DPI, bbox_inches='tight')
-    # plt.show()
+    plt.show()
     
     # Show the plot
     # plt.show()

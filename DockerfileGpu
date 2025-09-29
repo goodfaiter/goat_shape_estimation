@@ -12,7 +12,8 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
 RUN pip3 install numpy rosbags pybind11 pandas scikit-learn matplotlib tqdm roma PyQt6 pyarrow
 
 # Install dependencies
-RUN apt-get update && apt-get install -y git
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update && apt-get install -y git python3-tk
 
 # Create workspace
 RUN mkdir workspace

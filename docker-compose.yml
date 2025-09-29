@@ -19,21 +19,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    devices:
-      - /dev/dri:/dev/dri
-    environment:
-      - DISPLAY=${DISPLAY}
-      - XDG_RUNTIME_DIR=/tmp
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=all
-      - WAYLAND_DISPLAY=$WAYLAND_DISPLAY
-    group_add:
-      - "video"
-    privileged: True
-    runtime: nvidia
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:ro
-      - ${HOME}/.Xauthority:/root/.Xauthority
       - ./:/workspace
-      - $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY:/tmp/$WAYLAND_DISPLAY
     command: tail -f /dev/null
