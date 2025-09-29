@@ -4,6 +4,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.animation as animation
 
 # matplotlib.use('qtagg')
 LINEWIDTH = 3 # 1 standard, 3 for overleaf
@@ -113,7 +114,7 @@ def visualize_3d_spline(points_set, down_vec, text, filename):
     plt.tight_layout()
     plt.show()
 
-def visualize_3d_spline_minimal(points_set, down_vec):
+def visualize_3d_spline_minimal(points_set, down_vec, filename):
     """
     Minimal 3D visualization of spline fitting through points.
     No legends, background, or axis ticks.
@@ -176,8 +177,9 @@ def visualize_3d_spline_minimal(points_set, down_vec):
     ax.grid(False)
     # ax.legend()
     plt.axis('equal')
+    plt.savefig("/workspace/data/fig/plot_trajectories_" + filename + ".png", dpi=DPI, bbox_inches='tight')
     
-    plt.show()
+    # plt.show()
 
 
 def plot_velocity_comparison(estimated_vel, ground_truth_vel, time_axis=None, title="Velocity Comparison", 
@@ -284,6 +286,107 @@ def plot_trajectories(data, labels, linestyle, title="2D Trajectories", xlabel="
     # Show the plot
     plt.savefig("/workspace/data/fig/plot_trajectories_" + filename + ".png", dpi=DPI, bbox_inches='tight')
     # plt.show()
+
+def plot_time_series_video(data, labels=None, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=None, filename=""):
+    """
+    Plot multiple time series as an animated video.
+    
+    Parameters:
+    -----------
+    data : numpy array of shape [M, T]
+        Array containing M time series, each with T time steps
+    labels : list of str, optional
+        Labels for each time series (length M)
+    xlabel : str, optional
+        X-axis label
+    ylabel : str, optional
+        Y-axis label
+    ylim : tuple, optional
+        Y-axis limits (min, max)
+    filename : str, optional
+        Filename to save the animation
+    """
+    
+    M = len(data)
+    T = len(data[0])
+
+    time_axis = np.arange(T) * 0.05  # 20Hz
+
+    fig = plt.figure(figsize=(16, 4.5)) # 16 : 9
+    ax = fig.add_subplot(111)  # Use subplot instead of add_axes for better compatibility
+
+    # Create a colormap for different trajectories
+    colors = plt.cm.Paired(np.linspace(0, 1, M))
+    
+    plots = []
+    scatter_plots = []
+    
+    # Initialize plots with empty data
+    for i in range(M):
+        # Create line plot
+        plot, = ax.plot([], [], color=colors[i], label=labels[i] if labels else None, 
+                       linewidth=LINEWIDTH, alpha=0.8)
+        plots.append(plot)
+        
+        # Create scatter plot for current position
+        scatter = ax.scatter([], [], color=colors[i], s=100, marker='o', 
+                           edgecolors='black', zorder=5)
+        scatter_plots.append(scatter)
+    
+    # Set labels and grid
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(True, alpha=0.3)
+    
+    # Set x limits based on time axis
+    ax.set_xlim(time_axis[0], time_axis[-1])
+    
+    # Set y limits if provided
+    if ylim is not None:
+        ax.set_ylim(ylim[0], ylim[1])
+    else:
+        # Auto-set y limits based on data range
+        y_min = np.min(data)
+        y_max = np.max(data)
+        y_range = y_max - y_min
+        ax.set_ylim(y_min - 0.1 * y_range, y_max + 0.1 * y_range)
+    
+    if labels:
+        ax.legend(loc='best', fontsize=24)
+    
+    # Animation update function
+    def update(t):
+        for i in range(M):
+            # Update line plot data
+            x_data = time_axis[:t+1]
+            y_data = data[i][:t+1]
+            plots[i].set_data(x_data, y_data)
+            
+            # Update scatter plot (current position)
+            if t > 0:  # Only update if we have data
+                scatter_plots[i].set_offsets([[time_axis[t], data[i][t]]])
+        
+        return plots + scatter_plots
+    
+    # plt.tight_layout()
+    # fig.set_tight_layout(True)
+
+    plt.tight_layout(
+        pad=0.1,           # Padding between figure edge and edges of subplots
+        w_pad=0,         # Padding between subplots horizontally
+        h_pad=0,         # Padding between subplots vertically
+        rect=[0, 0, 1.0, 1.0]  # Rectangle in normalized figure coordinates)
+    )
+    
+    # Create animation
+    ani = animation.FuncAnimation(fig=fig, func=update, frames=T, interval=50, blit=True)
+    
+    # Save animation if filename is provided
+    if filename:
+        ani.save("/workspace/data/fig/plot_trajectories_video_" + filename + ".mp4", writer='ffmpeg', fps=20, dpi=DPI)  # Use 'ffmpeg' for video formats
+    
+    # plt.show()
+
 
 def plot_time_series(data, labels=None, xlabel="Time [s]", ylabel="Yaw Rate [rad/s]", ylim=None, filename=""):
     """

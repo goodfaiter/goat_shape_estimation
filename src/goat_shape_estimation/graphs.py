@@ -2,7 +2,7 @@ import torch
 import pandas as pd
 import numpy as np
 from helpers.data_processer import DataProcessorGoat, ema_2d_optimized
-from helpers.visualization.visualizer import visualize_3d_spline, plot_velocity_comparison, plot_trajectories, plot_time_series, visualize_3d_spline_minimal, plot_time_series_two_axis
+from helpers.visualization.visualizer import visualize_3d_spline, plot_velocity_comparison, plot_trajectories, plot_time_series, visualize_3d_spline_minimal, plot_time_series_two_axis, plot_time_series_video
 import roma
 
 NUM_POINTS = 12
@@ -228,7 +228,7 @@ def plot_minimal_shape(data, sim = False):
                 estimated_gravity[j] = data[f'/gravity_vector/data_{j}'][t]
         
         # if t > 600 and t % 10 == 0:
-        if t % 50 == 0:
+        if t % 10 == 0:
             text=f"Tendon length {inputs[t, -2]:.2f}[m] and {inputs[t, -1]:.2f}[m], index {t}, timestep {t*0.05:.2f}[s]"
             print(text)
             estimated_points_to_visualize[0, :, :] = estimated_points[INDICES_RING_ONE, :]
@@ -239,6 +239,7 @@ def plot_minimal_shape(data, sim = False):
             visualize_3d_spline_minimal(
                 estimated_points_to_visualize,
                 estimated_gravity,
+                filename=f"{t:04d}"
             )
 
 def calculate_rmse_reconstruction(data, start=0, end = None, sim = False):
@@ -347,7 +348,7 @@ def plot_gravity(data, start, end = None):
     series.append(data["/gravity_vector/data_0"][start:end])
     series.append(data["/gravity_vector/data_1"][start:end])
     series.append(data["/gravity_vector/data_2"][start:end])
-    plot_time_series(series, labels=["Estimated Gravity Vector X",
+    plot_time_series_video(series, labels=["Estimated Gravity Vector X",
                                      "Estimated Gravity Vector Y",
                                      "Estimated Gravity Vector Z"], xlabel="Time [s]", ylabel="Unit Vector []", ylim=[-1.1, 1.1], filename="gravity")
 
@@ -637,5 +638,5 @@ forward_pid_broken_wel = ("/workspace/data/2025_08_13/rosbag2_2025_08_13-17_22_1
 # data = pd.read_parquet("/workspace/data/2025_09_04/rosbag2_2025_09_04-17_44_23_goat_training.parquet") # rover to sphere
 # plot_morphing(data, 10, filename="morphing_timeseries_sphere_to_circle", sim=True)
 
-data = pd.read_parquet("/workspace/data/2025_09_15/rosbag2_2025_09_15-15_29_42_goat_training.parquet") # downhill fake mocap
-plot_gravity(data, start = int(28.9*20), end = int(36.1 * 20))
+# data = pd.read_parquet("/workspace/data/2025_09_15/rosbag2_2025_09_15-15_29_42_goat_training.parquet") # downhill fake mocap
+# plot_gravity(data, start = int(28.9*20), end = int(36.1 * 20))
